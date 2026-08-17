@@ -7,8 +7,20 @@
   "runArgs": ["--name", "stream-deck"],
   "remoteUser": "dev",
   "containerEnv": {
-    "SHELL": "/usr/bin/fish"
+    "SHELL": "/usr/bin/fish",
+    // Forward the host display server so the Tauri window opens on the host (Linux).
+    "DISPLAY": "${localEnv:DISPLAY}",
+    "WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
+    "XDG_RUNTIME_DIR": "/run/user/1000"
   },
+  "mounts": [
+    // X11 socket (also present on Wayland hosts via Xwayland)
+    "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
+    // Wayland socket + pipewire etc. live in the host runtime dir
+    "source=${localEnv:XDG_RUNTIME_DIR},target=/run/user/1000,type=bind,consistency=cached"
+  ],
+  // Vite dev server
+  "forwardPorts": [1420],
   "customizations": {
     "zed": {
       "extensions": ["rust", "typescript"]

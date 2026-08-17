@@ -60,6 +60,10 @@ RUN if getent passwd $USER_UID > /dev/null; then \
     && echo "$USERNAME ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME
 
+# Rust/rustup were installed as root; hand the toolchain dirs to the dev user
+# so cargo can write its registry cache (otherwise `cargo` fails with EACCES).
+RUN chown -R $USERNAME:$USERNAME /usr/local/cargo /usr/local/rustup
+
 # Make fish the default shell for both the dev user and root.
 RUN usermod -s /usr/bin/fish $USERNAME \
     && usermod -s /usr/bin/fish root

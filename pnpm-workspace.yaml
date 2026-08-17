@@ -1,0 +1,4 @@
+allowBuilds:
+  esbuild: true
+storeDir: ./node_modules/.pnpm-store
+packageImportMethod: hardlink
