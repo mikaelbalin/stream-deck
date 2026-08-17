@@ -2,7 +2,7 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use elgato_streamdeck::info::Kind;
-use elgato_streamdeck::{AsyncStreamDeck, DeviceStateUpdate};
+use elgato_streamdeck::{AsyncStreamDeck, StreamDeckInput};
 use hidapi::HidApi;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -91,34 +91,36 @@ pub async fn get_device_info(state: State<'_, AppState>) -> Result<Option<Device
 /// Spawns a background task that reads button events and emits them to the frontend.
 pub fn spawn_reader(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
+        let mut prev_buttons: Vec<bool> = vec![false, false, false];
+
         loop {
             let device = app.state::<AppState>().device.lock().unwrap().clone();
 
             match device {
-                Some(device) => {
-                    let reader = device.get_reader();
-                    match reader.read(30.0).await {
-                        Ok(updates) => {
-                            for update in updates {
-                                match update {
-                                    DeviceStateUpdate::ButtonDown(index) => {
-                                        let _ = app.emit("pedal-button-down", index);
-                                    }
-                                    DeviceStateUpdate::ButtonUp(index) => {
-                                        let _ = app.emit("pedal-button-up", index);
-                                    }
-                                    _ => {}
+                Some(device) => match device.read_input(30.0).await {
+                    Ok(StreamDeckInput::ButtonStateChange(buttons)) => {
+                        for (index, (new, old)) in
+                            buttons.iter().zip(prev_buttons.iter()).enumerate()
+                        {
+                            if new != old {
+                                if *new {
+                                    let _ = app.emit("pedal-button-down", index as u8);
+                                } else {
+                                    let _ = app.emit("pedal-button-up", index as u8);
                                 }
                             }
                         }
-                        Err(_) => {
-                            let state = app.state::<AppState>();
-                            *state.device.lock().unwrap() = None;
-                            let _ = app.emit("pedal-disconnected", ());
-                        }
+                        prev_buttons = buttons;
                     }
-                }
+                    Ok(_) => {}
+                    Err(_) => {
+                        *app.state::<AppState>().device.lock().unwrap() = None;
+                        prev_buttons = vec![false, false, false];
+                        let _ = app.emit("pedal-disconnected", ());
+                    }
+                },
                 None => {
+                    prev_buttons = vec![false, false, false];
                     tokio::time::sleep(Duration::from_millis(500)).await;
                 }
             }
