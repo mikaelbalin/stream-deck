@@ -1,8 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
 	Card,
 	CardAction,
@@ -22,27 +21,32 @@ interface DeviceInfo {
 const PEDAL_LABELS = ["Left", "Middle", "Right"];
 
 function App() {
-	const [devices, setDevices] = useState<DeviceInfo[]>([]);
 	const [connected, setConnected] = useState<DeviceInfo | null>(null);
 	const [pressed, setPressed] = useState<boolean[]>([false, false, false]);
-	const [error, setError] = useState<string | null>(null);
-
-	const refreshDevices = useCallback(async () => {
-		try {
-			setDevices(await invoke<DeviceInfo[]>("list_devices"));
-			setError(null);
-		} catch (e) {
-			setError(String(e));
-		}
-	}, []);
 
 	useEffect(() => {
-		refreshDevices();
-
+		let disposed = false;
 		const unlisteners: Promise<() => void>[] = [];
 
 		unlisteners.push(
+			listen<DeviceInfo>("pedal-connected", (event) => {
+				if (disposed) return;
+				setConnected(event.payload);
+				setPressed([false, false, false]);
+			}),
+		);
+
+		unlisteners.push(
+			listen("pedal-disconnected", () => {
+				if (disposed) return;
+				setConnected(null);
+				setPressed([false, false, false]);
+			}),
+		);
+
+		unlisteners.push(
 			listen<number>("pedal-button-down", (event) => {
+				if (disposed) return;
 				setPressed((prev) =>
 					prev.map((value, index) => (index === event.payload ? true : value)),
 				);
@@ -51,45 +55,28 @@ function App() {
 
 		unlisteners.push(
 			listen<number>("pedal-button-up", (event) => {
+				if (disposed) return;
 				setPressed((prev) =>
 					prev.map((value, index) => (index === event.payload ? false : value)),
 				);
 			}),
 		);
 
-		unlisteners.push(
-			listen("pedal-disconnected", () => {
-				setConnected(null);
-				setPressed([false, false, false]);
-			}),
-		);
+		// Fetch the current state in case the device was already connected
+		// before the listeners above were registered.
+		invoke<DeviceInfo | null>("get_device_info")
+			.then((info) => {
+				if (!disposed) setConnected(info);
+			})
+			.catch(() => {});
 
 		return () => {
+			disposed = true;
 			unlisteners.forEach((unlisten) => {
 				unlisten.then((f) => f());
 			});
 		};
-	}, [refreshDevices]);
-
-	async function connect(serial: string) {
-		try {
-			setConnected(await invoke<DeviceInfo>("connect", { serial }));
-			setError(null);
-		} catch (e) {
-			setError(String(e));
-		}
-	}
-
-	async function disconnect() {
-		try {
-			await invoke("disconnect");
-			setConnected(null);
-			setPressed([false, false, false]);
-			setError(null);
-		} catch (e) {
-			setError(String(e));
-		}
-	}
+	}, []);
 
 	return (
 		<main className="flex min-h-screen items-center justify-center p-6">
@@ -108,37 +95,14 @@ function App() {
 
 				<CardContent className="flex flex-col gap-4">
 					{connected ? (
-						<>
-							<div className="text-sm text-muted-foreground">
-								Serial: {connected.serial}
-								{connected.firmware ? ` · Firmware: ${connected.firmware}` : ""}
-							</div>
-							<Button variant="outline" onClick={disconnect}>
-								Disconnect
-							</Button>
-						</>
+						<div className="text-sm text-muted-foreground">
+							Serial: {connected.serial}
+							{connected.firmware ? ` · Firmware: ${connected.firmware}` : ""}
+						</div>
 					) : (
-						<>
-							{devices.length === 0 ? (
-								<div className="text-sm text-muted-foreground">
-									No Stream Deck Pedal found.
-								</div>
-							) : (
-								<div className="flex flex-col gap-2">
-									{devices.map((device) => (
-										<Button
-											key={device.serial}
-											onClick={() => connect(device.serial)}
-										>
-											Connect {device.serial}
-										</Button>
-									))}
-								</div>
-							)}
-							<Button variant="ghost" onClick={refreshDevices}>
-								Refresh
-							</Button>
-						</>
+						<div className="text-sm text-muted-foreground">
+							No Stream Deck Pedal connected.
+						</div>
 					)}
 
 					<div className="grid grid-cols-3 gap-2">
@@ -160,8 +124,6 @@ function App() {
 							</div>
 						))}
 					</div>
-
-					{error && <div className="text-sm text-destructive">{error}</div>}
 				</CardContent>
 			</Card>
 		</main>

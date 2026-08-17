@@ -31,47 +31,40 @@ impl AppState {
     }
 }
 
-/// Lists connected Stream Deck Pedal devices.
-#[tauri::command]
-pub fn list_devices(state: State<AppState>) -> Result<Vec<DeviceInfo>, String> {
-    let hidapi = state.hidapi.lock().map_err(|e| e.to_string())?;
-    let devices = elgato_streamdeck::list_devices(&hidapi)
+/// Returns the serial number of the first connected Stream Deck Pedal, if any.
+fn find_pedal_serial(app: &AppHandle) -> Option<String> {
+    let state = app.state::<AppState>();
+    let hidapi = state.hidapi.lock().ok()?;
+    elgato_streamdeck::list_devices(&hidapi)
         .into_iter()
-        .filter(|(kind, _)| *kind == Kind::Pedal)
-        .map(|(kind, serial)| DeviceInfo {
-            kind: format!("{:?}", kind),
-            serial,
-            firmware: None,
-        })
-        .collect();
-    Ok(devices)
+        .find(|(kind, _)| *kind == Kind::Pedal)
+        .map(|(_, serial)| serial)
 }
 
 /// Connects to a Stream Deck Pedal by serial number.
-#[tauri::command]
-pub async fn connect(state: State<'_, AppState>, serial: String) -> Result<DeviceInfo, String> {
+async fn connect_internal(app: &AppHandle, serial: &str) -> Result<DeviceInfo, String> {
     let device = {
+        let state = app.state::<AppState>();
         let hidapi = state.hidapi.lock().map_err(|e| e.to_string())?;
-        AsyncStreamDeck::connect(&hidapi, Kind::Pedal, &serial).map_err(|e| e.to_string())?
+        AsyncStreamDeck::connect(&hidapi, Kind::Pedal, serial).map_err(|e| e.to_string())?
     };
 
     let firmware = device.firmware_version().await.ok();
-    let actual_serial = device.serial_number().await.unwrap_or(serial);
+    let actual_serial = device
+        .serial_number()
+        .await
+        .unwrap_or_else(|_| serial.to_string());
 
-    *state.device.lock().map_err(|e| e.to_string())? = Some(device);
+    *app.state::<AppState>()
+        .device
+        .lock()
+        .map_err(|e| e.to_string())? = Some(device);
 
     Ok(DeviceInfo {
         kind: "Pedal".to_string(),
         serial: actual_serial,
         firmware,
     })
-}
-
-/// Disconnects the currently connected device.
-#[tauri::command]
-pub fn disconnect(state: State<AppState>) -> Result<(), String> {
-    *state.device.lock().map_err(|e| e.to_string())? = None;
-    Ok(())
 }
 
 /// Returns info about the currently connected device, if any.
@@ -88,8 +81,12 @@ pub async fn get_device_info(state: State<'_, AppState>) -> Result<Option<Device
     }
 }
 
-/// Spawns a background task that reads button events and emits them to the frontend.
-pub fn spawn_reader(app: AppHandle) {
+/// Spawns a background task that monitors for the device and reads button events.
+///
+/// When no device is connected it polls for a Pedal and auto-connects on
+/// appearance. When connected it reads button state changes and emits them to
+/// the frontend. A read error is treated as a physical disconnect.
+pub fn spawn_monitor(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
         let mut prev_buttons: Vec<bool> = vec![false, false, false];
 
@@ -130,6 +127,19 @@ pub fn spawn_reader(app: AppHandle) {
                 },
                 None => {
                     prev_buttons = vec![false, false, false];
+
+                    // Auto-connect when a Pedal is physically present.
+                    if let Some(serial) = find_pedal_serial(&app) {
+                        match connect_internal(&app, &serial).await {
+                            Ok(info) => {
+                                let _ = app.emit("pedal-connected", info);
+                            }
+                            Err(_) => {
+                                // Keep polling; the device may not be ready yet.
+                            }
+                        }
+                    }
+
                     tokio::time::sleep(Duration::from_millis(500)).await;
                 }
             }
