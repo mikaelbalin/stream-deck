@@ -99,18 +99,27 @@ pub fn spawn_reader(app: AppHandle) {
             match device {
                 Some(device) => match device.read_input(30.0).await {
                     Ok(StreamDeckInput::ButtonStateChange(buttons)) => {
-                        for (index, (new, old)) in
-                            buttons.iter().zip(prev_buttons.iter()).enumerate()
-                        {
-                            if new != old {
-                                if *new {
-                                    let _ = app.emit("pedal-button-down", index as u8);
-                                } else {
-                                    let _ = app.emit("pedal-button-up", index as u8);
+                        // The device may have been logically disconnected while we
+                        // were blocked in read_input, so only emit if still connected.
+                        let still_connected =
+                            app.state::<AppState>().device.lock().unwrap().is_some();
+
+                        if still_connected {
+                            for (index, (new, old)) in
+                                buttons.iter().zip(prev_buttons.iter()).enumerate()
+                            {
+                                if new != old {
+                                    if *new {
+                                        let _ = app.emit("pedal-button-down", index as u8);
+                                    } else {
+                                        let _ = app.emit("pedal-button-up", index as u8);
+                                    }
                                 }
                             }
+                            prev_buttons = buttons;
+                        } else {
+                            prev_buttons = vec![false, false, false];
                         }
-                        prev_buttons = buttons;
                     }
                     Ok(_) => {}
                     Err(_) => {
