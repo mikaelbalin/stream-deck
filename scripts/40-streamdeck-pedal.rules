@@ -1,0 +1,3 @@
+# Elgato Stream Deck Pedal (VID 0x0fd9, PID 0x0086)
+# Grants access to the hidraw device node for the logged-in user via uaccess.
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="0086", TAG+="uaccess", MODE="0660"
