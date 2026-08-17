@@ -39,10 +39,14 @@ RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
+# Install pnpm (latest) globally via npm.
+# See: https://pnpm.io/installation
+RUN npm install -g pnpm
+
 # Create a non-root user (devcontainer convention).
 # ubuntu:24.04 ships a `ubuntu` user with UID/GID 1000, so remove any
 # conflicting user/group first to avoid "UID/GID already exists" errors.
-ARG USERNAME=vscode
+ARG USERNAME=dev
 ARG USER_UID=1000
 ARG USER_GID=1000
 RUN if getent passwd $USER_UID > /dev/null; then \

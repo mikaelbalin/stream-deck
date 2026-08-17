@@ -1,10 +1,11 @@
 {
-  "name": "Tauri Dev Container",
+  "name": "stream-deck",
   "build": {
     "dockerfile": "Dockerfile",
     "context": "."
   },
-  "remoteUser": "vscode",
+  "runArgs": ["--name", "stream-deck"],
+  "remoteUser": "dev",
   "containerEnv": {
     "SHELL": "/usr/bin/fish"
   },
@@ -20,5 +21,5 @@
       ]
     }
   },
-  "postCreateCommand": "rustc --version && cargo --version && node --version && npm --version && fish --version"
+  "postCreateCommand": "rustc --version && cargo --version && node --version && npm --version && pnpm --version && fish --version"
 }
