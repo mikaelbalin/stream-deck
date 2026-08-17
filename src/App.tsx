@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
 	Card,
 	CardAction,
@@ -23,6 +24,7 @@ const PEDAL_LABELS = ["Left", "Middle", "Right"];
 function App() {
 	const [connected, setConnected] = useState<DeviceInfo | null>(null);
 	const [pressed, setPressed] = useState<boolean[]>([false, false, false]);
+	const [testResult, setTestResult] = useState<string | null>(null);
 
 	useEffect(() => {
 		let disposed = false;
@@ -78,6 +80,15 @@ function App() {
 		};
 	}, []);
 
+	async function testKeyboard() {
+		try {
+			await invoke("test_keyboard");
+			setTestResult("OK — uinput works");
+		} catch (e) {
+			setTestResult(`Error: ${String(e)}`);
+		}
+	}
+
 	return (
 		<main className="flex min-h-screen items-center justify-center p-6">
 			<Card className="w-full max-w-md">
@@ -124,6 +135,13 @@ function App() {
 							</div>
 						))}
 					</div>
+
+					<Button variant="outline" onClick={testKeyboard}>
+						Test keyboard
+					</Button>
+					{testResult && (
+						<div className="text-sm text-muted-foreground">{testResult}</div>
+					)}
 				</CardContent>
 			</Card>
 		</main>

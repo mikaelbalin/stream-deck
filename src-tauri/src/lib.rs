@@ -1,5 +1,7 @@
+mod keyboard;
 mod streamdeck;
 
+use keyboard::test_keyboard;
 use streamdeck::{get_device_info, spawn_monitor, AppState};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -17,7 +19,11 @@ pub fn run() {
             spawn_monitor(app.handle().clone());
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, get_device_info])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            get_device_info,
+            test_keyboard
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
