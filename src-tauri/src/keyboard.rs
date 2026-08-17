@@ -157,12 +157,3 @@ fn supported_keys() -> AttributeSet<KeyCode> {
     .into_iter()
     .collect()
 }
-
-/// Emits a harmless key press/release to verify uinput access works.
-#[tauri::command]
-pub fn test_keyboard() -> Result<(), String> {
-    let mut keyboard = Keyboard::new()?;
-    keyboard.press(&[KeyCode::KEY_F13])?;
-    keyboard.release(&[KeyCode::KEY_F13])?;
-    Ok(())
-}

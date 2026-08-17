@@ -80,10 +80,19 @@ function App() {
 		};
 	}, []);
 
-	async function testKeyboard() {
+	async function testEmulation() {
 		try {
-			await invoke("test_keyboard");
-			setTestResult("OK — uinput works");
+			await invoke("set_binding", {
+				pedal: 0,
+				binding: {
+					ctrl: false,
+					shift: false,
+					alt: false,
+					meta: false,
+					code: "F13",
+				},
+			});
+			setTestResult("Pedal 0 = F13. Press the left pedal to test.");
 		} catch (e) {
 			setTestResult(`Error: ${String(e)}`);
 		}
@@ -136,8 +145,8 @@ function App() {
 						))}
 					</div>
 
-					<Button variant="outline" onClick={testKeyboard}>
-						Test keyboard
+					<Button variant="outline" onClick={testEmulation}>
+						Test emulation (set pedal 0 = F13)
 					</Button>
 					{testResult && (
 						<div className="text-sm text-muted-foreground">{testResult}</div>

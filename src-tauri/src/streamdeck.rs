@@ -7,6 +7,9 @@ use hidapi::HidApi;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
 
+use crate::bindings::binding_for_pedal;
+use crate::keyboard::Keyboard;
+
 /// Information about a connected Stream Deck device.
 #[derive(Clone, Serialize)]
 pub struct DeviceInfo {
@@ -19,14 +22,23 @@ pub struct DeviceInfo {
 pub struct AppState {
     hidapi: Mutex<HidApi>,
     device: Mutex<Option<AsyncStreamDeck>>,
+    keyboard: Mutex<Option<Keyboard>>,
 }
 
 impl AppState {
     pub fn new() -> Result<Self, String> {
         let hidapi = elgato_streamdeck::new_hidapi().map_err(|e| e.to_string())?;
+        let keyboard = match Keyboard::new() {
+            Ok(k) => Some(k),
+            Err(e) => {
+                eprintln!("warning: keyboard emulation unavailable: {e}");
+                None
+            }
+        };
         Ok(Self {
             hidapi: Mutex::new(hidapi),
             device: Mutex::new(None),
+            keyboard: Mutex::new(keyboard),
         })
     }
 }
@@ -81,6 +93,31 @@ pub async fn get_device_info(state: State<'_, AppState>) -> Result<Option<Device
     }
 }
 
+/// Emulates a key press or release for the given pedal's binding.
+fn emulate_key(app: &AppHandle, pedal: u8, pressed: bool) {
+    let Some(binding) = binding_for_pedal(app, pedal) else {
+        return;
+    };
+    let Some(keys) = binding.to_key_codes() else {
+        return;
+    };
+
+    let state = app.state::<AppState>();
+    let mut keyboard = match state.keyboard.lock() {
+        Ok(k) => k,
+        Err(_) => return,
+    };
+    let Some(keyboard) = keyboard.as_mut() else {
+        return;
+    };
+
+    if pressed {
+        let _ = keyboard.press(&keys);
+    } else {
+        let _ = keyboard.release(&keys);
+    }
+}
+
 /// Spawns a background task that monitors for the device and reads button events.
 ///
 /// When no device is connected it polls for a Pedal and auto-connects on
@@ -108,8 +145,10 @@ pub fn spawn_monitor(app: AppHandle) {
                                 if new != old {
                                     if *new {
                                         let _ = app.emit("pedal-button-down", index as u8);
+                                        emulate_key(&app, index as u8, true);
                                     } else {
                                         let _ = app.emit("pedal-button-up", index as u8);
+                                        emulate_key(&app, index as u8, false);
                                     }
                                 }
                             }
