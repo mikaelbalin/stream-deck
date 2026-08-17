@@ -1,7 +1,108 @@
-# Tauri + React + Typescript
+# Stream Deck Pedal
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+Tauri 2 + React 19 + TypeScript application that adds support for the
+**Elgato Stream Deck Pedal** on Linux.
 
-## Recommended IDE Setup
+The Stream Deck Pedal is a three-pedal foot controller exposed as a HID device. This app connects to it, shows its connection state and pedal
+presses, and lets you map each pedal to a keyboard shortcut that is emulated
+system-wide.
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+## Supported platforms
+
+- **Linux only.** Tested targets:
+  - **Bazzite** (Fedora Atomic, KDE/Wayland)
+  - **Raspberry Pi OS** (Debian)
+
+Windows and macOS are intentionally out of scope.
+
+## How it works
+
+- The device is discovered and read through the
+  [`elgato-streamdeck`](https://crates.io/crates/elgato-streamdeck) and
+  [`hidapi`](https://crates.io/crates/hidapi) crates.
+- Keyboard shortcuts are emulated at the kernel level via
+  [`evdev`](https://crates.io/crates/evdev)'s `uinput` support, which works
+  identically on X11 and Wayland.
+
+## Prerequisites
+
+- Rust toolchain (stable)
+- Node.js + pnpm
+- On Debian-based systems (Raspberry Pi OS), the `hidapi` crate may need
+  `libudev-dev` at link time:
+  ```sh
+  sudo apt install libudev-dev
+  ```
+
+## Development
+
+```sh
+pnpm install
+pnpm tauri dev
+```
+
+## udev rules (`scripts/`)
+
+The app talks to two kernel devices that are not world-writable by default on
+most distributions:
+
+1. The Stream Deck Pedal **HID** device (`/dev/hidraw*`).
+2. **`/dev/uinput`**, used to create a virtual keyboard for shortcut emulation.
+
+The `scripts/` directory contains udev rules and helper scripts to grant the
+logged-in user access to both, without requiring root at runtime.
+
+### Files
+
+| File                        | Purpose                                                             |
+| --------------------------- | ------------------------------------------------------------------- |
+| `40-streamdeck-pedal.rules` | Grants access to the Pedal HID device (VID `0x0fd9`, PID `0x0086`). |
+| `40-uinput.rules`           | Grants access to `/dev/uinput` for keyboard emulation.              |
+| `udev-install.sh`           | Installs both rules into `/etc/udev/rules.d/` and reloads udev.     |
+| `udev-remove.sh`            | Removes both rules and reloads udev.                                |
+
+Both rules use the `uaccess` tag, which grants access to the user on the active
+seat via `systemd-logind` — no manual group membership is required.
+
+### When are the rules needed?
+
+| Distribution    | HID device        | `/dev/uinput`              | Rules needed?  |
+| --------------- | ----------------- | -------------------------- | -------------- |
+| Bazzite         | already `0666`    | usually already accessible | Usually **no** |
+| Raspberry Pi OS | `0600` by default | `0600` by default          | **Yes**        |
+
+On Bazzite the device nodes are already accessible (gaming-distro policy), so
+the rules are typically unnecessary. On Raspberry Pi OS they are required.
+
+### Installing
+
+```sh
+sudo ./scripts/udev-install.sh
+```
+
+### Removing
+
+```sh
+sudo ./scripts/udev-remove.sh
+```
+
+### Verifying access
+
+After installing the rules (and re-plugging the device), check the device nodes:
+
+```sh
+# Stream Deck Pedal HID device
+ls -l /dev/hidraw*
+
+# Virtual keyboard device
+ls -l /dev/uinput
+```
+
+The Pedal should appear as a `hidraw` node accessible to your user, and
+`/dev/uinput` should be writable by your user (via the `uaccess` ACL).
+
+## Building
+
+```sh
+pnpm tauri build
+```
