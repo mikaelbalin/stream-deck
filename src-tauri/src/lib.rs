@@ -1,6 +1,8 @@
+mod bindings;
 mod keyboard;
 mod streamdeck;
 
+use bindings::{get_bindings, set_binding};
 use keyboard::test_keyboard;
 use streamdeck::{get_device_info, spawn_monitor, AppState};
 
@@ -22,7 +24,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             get_device_info,
-            test_keyboard
+            test_keyboard,
+            get_bindings,
+            set_binding
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
