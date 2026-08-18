@@ -9,6 +9,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 rm -f "$DEST_DIR/40-streamdeck-pedal.rules" "$DEST_DIR/40-uinput.rules"
+rm -f /etc/modules-load.d/uinput.conf
 udevadm control --reload-rules
 
 echo "Removed udev rules and reloaded."

@@ -58,8 +58,9 @@ logged-in user access to both, without requiring root at runtime.
 | --------------------------- | ------------------------------------------------------------------- |
 | `40-streamdeck-pedal.rules` | Grants access to the Pedal HID device (VID `0x0fd9`, PID `0x0086`). |
 | `40-uinput.rules`           | Grants access to `/dev/uinput` via the `input` group.               |
-| `udev-install.sh`           | Installs both rules into `/etc/udev/rules.d/` and reloads udev.     |
-| `udev-remove.sh`            | Removes both rules and reloads udev.                                |
+| `uinput.conf`               | Loads the `uinput` kernel module at boot (`/etc/modules-load.d/`).  |
+| `udev-install.sh`           | Installs the rules and module config, then reloads udev.            |
+| `udev-remove.sh`            | Removes the rules and module config, then reloads udev.             |
 
 The Pedal rule uses the `uaccess` tag, which grants access to the user on the
 active seat via `systemd-logind` — no manual group membership is required.
@@ -67,6 +68,10 @@ active seat via `systemd-logind` — no manual group membership is required.
 The `uinput` rule instead uses the `input` group, because `uaccess` does not
 apply to `/dev/uinput` (it is a misc device, not a seat device). The user must
 therefore be a member of the `input` group.
+
+The `uinput` kernel module must also be loaded, otherwise `/dev/uinput` is only
+a static node with default `0600 root:root` permissions and the udev rule has
+no device to apply to. `uinput.conf` loads the module at boot.
 
 ### When are the rules needed?
 
@@ -87,11 +92,14 @@ executable first:
 chmod +x scripts/udev-install.sh scripts/udev-remove.sh
 ```
 
-Then install the rules:
+Then install the rules and module config:
 
 ```sh
 sudo ./scripts/udev-install.sh
 ```
+
+The script installs the udev rules, installs `uinput.conf` into
+`/etc/modules-load.d/`, and loads the `uinput` module immediately.
 
 The `uinput` rule grants access via the `input` group, so add your user to that
 group (then log out and back in, or reboot):
@@ -195,6 +203,7 @@ sudo dpkg -r stream-deck
 ### udev rules in packages
 
 On install, `40-streamdeck-pedal.rules` and `40-uinput.rules` are placed in
-`/etc/udev/rules.d/`, then `udevadm control --reload-rules` and
-`udevadm trigger` run. On removal, the package manager deletes the rule files
-and `postremove.sh` reloads udev. No manual cleanup is needed.
+`/etc/udev/rules.d/`, and `uinput.conf` in `/etc/modules-load.d/`. Then
+`postinstall.sh` reloads udev, loads the `uinput` module, and triggers udev.
+On removal, the package manager deletes these files and `postremove.sh` reloads
+udev. No manual cleanup is needed.
