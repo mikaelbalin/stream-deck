@@ -106,3 +106,74 @@ The Pedal should appear as a `hidraw` node accessible to your user, and
 ```sh
 pnpm tauri build
 ```
+
+This produces installable packages in `src-tauri/target/release/bundle/`:
+
+- `stream-deck_0.1.0_amd64.deb` (x86_64) / `stream-deck_0.1.0_arm64.deb` (arm64)
+- `stream-deck-0.1.0-1.x86_64.rpm` (x86_64)
+
+Packages are built for the architecture of the machine running the build. To
+produce an `arm64` package for Raspberry Pi OS, build on the Pi itself.
+
+## Installing the built packages
+
+The packages embed the udev rules and install/remove them automatically via
+`postinstall.sh` / `postremove.sh`, so no manual udev setup is required.
+
+### Bazzite (Fedora Atomic / ostree)
+
+Bazzite is an immutable system, so a local RPM is installed with `rpm-ostree`
+(layering) rather than `dnf`. A reboot is required after install or removal.
+
+Install:
+
+```sh
+rpm-ostree install ./stream-deck-0.1.0-1.x86_64.rpm
+systemctl reboot
+```
+
+Remove:
+
+```sh
+rpm-ostree uninstall stream-deck
+systemctl reboot
+```
+
+Check the layered package:
+
+```sh
+rpm-ostree status
+```
+
+### Raspberry Pi OS (Debian)
+
+Install (apt resolves dependencies automatically):
+
+```sh
+sudo apt install ./stream-deck_0.1.0_arm64.deb
+```
+
+or via `dpkg`:
+
+```sh
+sudo dpkg -i ./stream-deck_0.1.0_arm64.deb
+```
+
+Remove:
+
+```sh
+sudo apt remove stream-deck
+```
+
+or:
+
+```sh
+sudo dpkg -r stream-deck
+```
+
+### udev rules in packages
+
+On install, `40-streamdeck-pedal.rules` and `40-uinput.rules` are placed in
+`/etc/udev/rules.d/`, then `udevadm control --reload-rules` and
+`udevadm trigger` run. On removal, the package manager deletes the rule files
+and `postremove.sh` reloads udev. No manual cleanup is needed.
