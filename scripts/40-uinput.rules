@@ -1,3 +1,8 @@
 # Allow access to /dev/uinput for the logged-in user.
 # Required for keyboard emulation (virtual input device) on both X11 and Wayland.
-KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", MODE="0660"
+#
+# Note: the `uaccess` tag does NOT work for /dev/uinput — it is a misc device,
+# not a seat device, so systemd-logind never applies an ACL to it. Instead we
+# grant access via the `input` group. The user must be a member of that group
+# (see README).
+KERNEL=="uinput", SUBSYSTEM=="misc", GROUP="input", MODE="0660"

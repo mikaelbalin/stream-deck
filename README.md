@@ -57,12 +57,16 @@ logged-in user access to both, without requiring root at runtime.
 | File                        | Purpose                                                             |
 | --------------------------- | ------------------------------------------------------------------- |
 | `40-streamdeck-pedal.rules` | Grants access to the Pedal HID device (VID `0x0fd9`, PID `0x0086`). |
-| `40-uinput.rules`           | Grants access to `/dev/uinput` for keyboard emulation.              |
+| `40-uinput.rules`           | Grants access to `/dev/uinput` via the `input` group.               |
 | `udev-install.sh`           | Installs both rules into `/etc/udev/rules.d/` and reloads udev.     |
 | `udev-remove.sh`            | Removes both rules and reloads udev.                                |
 
-Both rules use the `uaccess` tag, which grants access to the user on the active
-seat via `systemd-logind` — no manual group membership is required.
+The Pedal rule uses the `uaccess` tag, which grants access to the user on the
+active seat via `systemd-logind` — no manual group membership is required.
+
+The `uinput` rule instead uses the `input` group, because `uaccess` does not
+apply to `/dev/uinput` (it is a misc device, not a seat device). The user must
+therefore be a member of the `input` group.
 
 ### When are the rules needed?
 
@@ -76,8 +80,24 @@ the rules are typically unnecessary. On Raspberry Pi OS they are required.
 
 ### Installing
 
+If the scripts are not executable (e.g. right after cloning), make them
+executable first:
+
+```sh
+chmod +x scripts/udev-install.sh scripts/udev-remove.sh
+```
+
+Then install the rules:
+
 ```sh
 sudo ./scripts/udev-install.sh
+```
+
+The `uinput` rule grants access via the `input` group, so add your user to that
+group (then log out and back in, or reboot):
+
+```sh
+sudo usermod -aG input "$USER"
 ```
 
 ### Removing
@@ -98,8 +118,9 @@ ls -l /dev/hidraw*
 ls -l /dev/uinput
 ```
 
-The Pedal should appear as a `hidraw` node accessible to your user, and
-`/dev/uinput` should be writable by your user (via the `uaccess` ACL).
+The Pedal should appear as a `hidraw` node accessible to your user (via the
+`uaccess` ACL), and `/dev/uinput` should be owned by the `input` group with
+mode `0660` so that your user (a member of `input`) can write to it.
 
 ## Building
 
