@@ -17,6 +17,11 @@ Windows and macOS are intentionally out of scope.
 
 ## How it works
 
+- The app is split into two processes:
+  - A **daemon** (`stream-deck --daemon`) that reads the Pedal, emulates key
+    bindings, and runs as a systemd user service.
+  - A **GUI** (Tauri) that shows connection state and edits bindings, talking
+    to the daemon over a Unix domain socket.
 - The device is discovered and read through the
   [`elgato-streamdeck`](https://crates.io/crates/elgato-streamdeck) and
   [`hidapi`](https://crates.io/crates/hidapi) crates.
@@ -123,6 +128,59 @@ ls -l /dev/uinput
 The Pedal should appear as a `hidraw` node accessible to your user (via the
 `uaccess` ACL), and `/dev/uinput` should be world-writable (`0666`).
 
+## Daemon (systemd user service)
+
+The Pedal is read by a headless daemon (`stream-deck --daemon`) that runs
+independently of the GUI, so key bindings keep working when the GUI is closed.
+The daemon is managed as a systemd **user** service.
+
+### Files
+
+| File                        | Purpose                                                                    |
+| --------------------------- | -------------------------------------------------------------------------- |
+| `stream-deck-pedal.service` | systemd user unit (used by the package; points at `/usr/bin/stream-deck`). |
+| `daemon-install.sh`         | Generates a unit with the local dev binary path, installs and enables it.  |
+| `daemon-remove.sh`          | Disables and removes the user service.                                     |
+
+### Development
+
+Make the scripts executable, then install the service:
+
+```sh
+chmod +x scripts/daemon-install.sh scripts/daemon-remove.sh
+./scripts/daemon-install.sh
+```
+
+This generates a unit pointing at the locally built binary, installs it into
+`~/.config/systemd/user/`, and runs `systemctl --user enable --now`.
+
+Check status:
+
+```sh
+systemctl --user status stream-deck-pedal
+```
+
+Remove:
+
+```sh
+./scripts/daemon-remove.sh
+```
+
+### In packages
+
+The package installs `stream-deck-pedal.service` into `/usr/lib/systemd/user/`.
+On first launch, the GUI runs `systemctl --user enable --now stream-deck-pedal`
+to enable and start the daemon. After that the daemon auto-starts on login and
+auto-restarts on failure.
+
+On removal, the package deletes the unit file, but the user-level enable
+(symlink in `~/.config/systemd/user/`) and a running daemon are not cleaned up
+automatically (the package scripts run as root). To fully remove, run:
+
+```sh
+systemctl --user disable --now stream-deck-pedal
+```
+
 ## Building
 
 ```sh
@@ -139,8 +197,9 @@ produce an `arm64` package for Raspberry Pi OS, build on the Pi itself.
 
 ## Installing the built packages
 
-The packages embed the udev rules and install/remove them automatically via
-`postinstall.sh` / `postremove.sh`, so no manual udev setup is required.
+The packages embed the udev rules and the systemd user unit. The udev rules are
+installed/removed automatically via `postinstall.sh` / `postremove.sh`; the
+daemon is enabled on first GUI launch (see "Daemon" above).
 
 ### Bazzite (Fedora Atomic / ostree)
 

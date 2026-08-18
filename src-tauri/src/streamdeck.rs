@@ -70,6 +70,11 @@ async fn ensure_daemon_running() {
     if socket_reachable().await {
         return;
     }
+    // Reload so a freshly installed unit file is visible, then enable + start.
+    let _ = tokio::process::Command::new("systemctl")
+        .args(["--user", "daemon-reload"])
+        .output()
+        .await;
     let _ = tokio::process::Command::new("systemctl")
         .args(["--user", "enable", "--now", "stream-deck-pedal"])
         .output()

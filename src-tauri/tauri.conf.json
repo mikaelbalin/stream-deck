@@ -36,7 +36,8 @@
         "files": {
           "/etc/udev/rules.d/40-streamdeck-pedal.rules": "../scripts/40-streamdeck-pedal.rules",
           "/etc/udev/rules.d/40-uinput.rules": "../scripts/40-uinput.rules",
-          "/etc/modules-load.d/uinput.conf": "../scripts/uinput.conf"
+          "/etc/modules-load.d/uinput.conf": "../scripts/uinput.conf",
+          "/usr/lib/systemd/user/stream-deck-pedal.service": "../scripts/stream-deck-pedal.service"
         },
         "postInstallScript": "scripts/postinstall.sh",
         "postRemoveScript": "scripts/postremove.sh"
@@ -45,7 +46,8 @@
         "files": {
           "/etc/udev/rules.d/40-streamdeck-pedal.rules": "../scripts/40-streamdeck-pedal.rules",
           "/etc/udev/rules.d/40-uinput.rules": "../scripts/40-uinput.rules",
-          "/etc/modules-load.d/uinput.conf": "../scripts/uinput.conf"
+          "/etc/modules-load.d/uinput.conf": "../scripts/uinput.conf",
+          "/usr/lib/systemd/user/stream-deck-pedal.service": "../scripts/stream-deck-pedal.service"
         },
         "postInstallScript": "scripts/postinstall.sh",
         "postRemoveScript": "scripts/postremove.sh"
