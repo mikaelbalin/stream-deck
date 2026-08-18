@@ -11,5 +11,10 @@ fn main() {
         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
     }
 
-    stream_deck_lib::run()
+    let is_daemon = std::env::args().any(|arg| arg == "--daemon");
+    if is_daemon {
+        stream_deck_lib::run_daemon();
+    } else {
+        stream_deck_lib::run();
+    }
 }

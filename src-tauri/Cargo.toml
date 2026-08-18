@@ -24,5 +24,5 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 elgato-streamdeck = { version = "0.13", features = ["async"] }
 hidapi = "2"
-tokio = { version = "1", features = ["time"] }
+tokio = { version = "1", features = ["time", "rt", "rt-multi-thread", "net", "io-util", "sync", "macros"] }
 evdev = "0.13"
