@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Events pushed from the daemon to connected GUI clients.
 ///
 /// Serialized as newline-delimited JSON over a Unix domain socket.
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum DaemonEvent {
     Connected {

@@ -6,7 +6,7 @@ mod keyboard;
 mod streamdeck;
 
 use bindings::{get_bindings, set_binding};
-use streamdeck::{get_device_info, spawn_monitor, AppState};
+use streamdeck::{get_device_info, spawn_daemon_client, AppState};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -18,9 +18,9 @@ fn greet(name: &str) -> String {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .manage(AppState::new().expect("failed to initialize hidapi"))
+        .manage(AppState::new())
         .setup(|app| {
-            spawn_monitor(app.handle().clone());
+            spawn_daemon_client(app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

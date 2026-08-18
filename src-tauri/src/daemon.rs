@@ -1,9 +1,11 @@
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use elgato_streamdeck::info::Kind;
 use elgato_streamdeck::{AsyncStreamDeck, StreamDeckInput};
 use hidapi::HidApi;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::unix::OwnedWriteHalf;
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::broadcast;
 
@@ -12,10 +14,18 @@ use crate::ipc::{socket_path, DaemonEvent};
 use crate::keyboard::Keyboard;
 
 /// Info about a freshly connected device, used to build a `DaemonEvent::Connected`.
+#[derive(Clone)]
 struct ConnectedInfo {
     kind: String,
     serial: String,
     firmware: Option<String>,
+}
+
+/// Current daemon state, shared with the accept loop for client snapshots.
+#[derive(Clone, Default)]
+struct DaemonState {
+    connected: Option<ConnectedInfo>,
+    buttons: [bool; 3],
 }
 
 /// Runs the headless daemon: reads the Pedal, emulates key bindings via uinput,
@@ -31,35 +41,46 @@ pub async fn run() -> Result<(), String> {
     };
 
     let (tx, _rx) = broadcast::channel::<DaemonEvent>(16);
+    let state = Arc::new(Mutex::new(DaemonState::default()));
 
     // Remove any stale socket left by a previous run, then bind.
     let path = socket_path();
     let _ = std::fs::remove_file(&path);
     let listener = UnixListener::bind(&path).map_err(|e| e.to_string())?;
     eprintln!("daemon: listening on {}", path.display());
-    tokio::spawn(accept_loop(listener, tx.clone()));
+    tokio::spawn(accept_loop(listener, tx.clone(), state.clone()));
 
     let mut device: Option<AsyncStreamDeck> = None;
-    let mut prev_buttons = vec![false, false, false];
 
     loop {
         let current = device.take();
         match current {
             Some(d) => match d.read_input(30.0).await {
                 Ok(StreamDeckInput::ButtonStateChange(buttons)) => {
-                    for (index, (new, old)) in buttons.iter().zip(prev_buttons.iter()).enumerate() {
-                        if new != old {
-                            let pedal = index as u8;
-                            if *new {
-                                let _ = tx.send(DaemonEvent::ButtonDown { pedal });
-                                emulate(&mut keyboard, pedal, true);
-                            } else {
-                                let _ = tx.send(DaemonEvent::ButtonUp { pedal });
-                                emulate(&mut keyboard, pedal, false);
+                    let changes = {
+                        let mut st = state.lock().unwrap();
+                        let mut changes = Vec::new();
+                        for index in 0..buttons.len().min(st.buttons.len()) {
+                            let new = buttons[index];
+                            let old = st.buttons[index];
+                            if new != old {
+                                st.buttons[index] = new;
+                                changes.push((index as u8, new));
                             }
                         }
+                        changes
+                    };
+
+                    for (pedal, pressed) in changes {
+                        if pressed {
+                            let _ = tx.send(DaemonEvent::ButtonDown { pedal });
+                            emulate(&mut keyboard, pedal, true);
+                        } else {
+                            let _ = tx.send(DaemonEvent::ButtonUp { pedal });
+                            emulate(&mut keyboard, pedal, false);
+                        }
                     }
-                    prev_buttons = buttons;
+
                     device = Some(d);
                 }
                 Ok(_) => {
@@ -67,17 +88,24 @@ pub async fn run() -> Result<(), String> {
                 }
                 Err(_) => {
                     eprintln!("daemon: device disconnected");
-                    prev_buttons = vec![false, false, false];
+                    {
+                        let mut st = state.lock().unwrap();
+                        st.connected = None;
+                        st.buttons = [false; 3];
+                    }
                     let _ = tx.send(DaemonEvent::Disconnected);
                 }
             },
             None => {
-                prev_buttons = vec![false, false, false];
-
                 if let Some(serial) = find_pedal_serial(&hidapi) {
                     match connect(&hidapi, &serial).await {
                         Ok((d, info)) => {
                             eprintln!("daemon: connected {} (serial {})", info.kind, info.serial);
+                            {
+                                let mut st = state.lock().unwrap();
+                                st.connected = Some(info.clone());
+                                st.buttons = [false; 3];
+                            }
                             let _ = tx.send(DaemonEvent::Connected {
                                 kind: info.kind,
                                 serial: info.serial,
@@ -148,13 +176,18 @@ async fn connect(
 }
 
 /// Accepts GUI client connections and forwards broadcast events to each one.
-async fn accept_loop(listener: UnixListener, tx: broadcast::Sender<DaemonEvent>) {
+async fn accept_loop(
+    listener: UnixListener,
+    tx: broadcast::Sender<DaemonEvent>,
+    state: Arc<Mutex<DaemonState>>,
+) {
     loop {
         match listener.accept().await {
             Ok((stream, _addr)) => {
                 let tx = tx.clone();
+                let state = state.clone();
                 tokio::spawn(async move {
-                    if let Err(e) = forward_events(stream, tx).await {
+                    if let Err(e) = forward_events(stream, tx, state).await {
                         eprintln!("daemon: client error: {e}");
                     }
                 });
@@ -167,15 +200,23 @@ async fn accept_loop(listener: UnixListener, tx: broadcast::Sender<DaemonEvent>)
     }
 }
 
-/// Forwards broadcast events to a single client until it disconnects.
+/// Sends a state snapshot, then forwards live events to a single client until
+/// it disconnects.
 async fn forward_events(
     stream: UnixStream,
     tx: broadcast::Sender<DaemonEvent>,
+    state: Arc<Mutex<DaemonState>>,
 ) -> Result<(), String> {
-    let mut rx = tx.subscribe();
     let (mut reader, mut writer) = stream.into_split();
-    let mut buf = [0u8; 1024];
 
+    // Subscribe before reading the snapshot so no event is missed in between.
+    let mut rx = tx.subscribe();
+
+    // Send a snapshot of the current state.
+    let snapshot = state.lock().unwrap().clone();
+    send_snapshot(&mut writer, &snapshot).await?;
+
+    let mut buf = [0u8; 1024];
     loop {
         tokio::select! {
             read = reader.read(&mut buf) => {
@@ -187,9 +228,7 @@ async fn forward_events(
             event = rx.recv() => {
                 match event {
                     Ok(event) => {
-                        let mut line = serde_json::to_string(&event).map_err(|e| e.to_string())?;
-                        line.push('\n');
-                        writer.write_all(line.as_bytes()).await.map_err(|e| e.to_string())?;
+                        write_event(&mut writer, &event).await?;
                     }
                     Err(broadcast::error::RecvError::Lagged(_)) => continue,
                     Err(broadcast::error::RecvError::Closed) => break,
@@ -199,4 +238,40 @@ async fn forward_events(
     }
 
     Ok(())
+}
+
+/// Writes the current state as a sequence of events.
+async fn send_snapshot(writer: &mut OwnedWriteHalf, state: &DaemonState) -> Result<(), String> {
+    match &state.connected {
+        Some(info) => {
+            write_event(
+                writer,
+                &DaemonEvent::Connected {
+                    kind: info.kind.clone(),
+                    serial: info.serial.clone(),
+                    firmware: info.firmware.clone(),
+                },
+            )
+            .await?;
+            for (pedal, pressed) in state.buttons.iter().enumerate() {
+                if *pressed {
+                    write_event(writer, &DaemonEvent::ButtonDown { pedal: pedal as u8 }).await?;
+                }
+            }
+        }
+        None => {
+            write_event(writer, &DaemonEvent::Disconnected).await?;
+        }
+    }
+    Ok(())
+}
+
+/// Serializes and writes a single event as a newline-delimited JSON line.
+async fn write_event(writer: &mut OwnedWriteHalf, event: &DaemonEvent) -> Result<(), String> {
+    let mut line = serde_json::to_string(event).map_err(|e| e.to_string())?;
+    line.push('\n');
+    writer
+        .write_all(line.as_bytes())
+        .await
+        .map_err(|e| e.to_string())
 }
