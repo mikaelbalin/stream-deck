@@ -36,13 +36,24 @@ pub fn get_device_info(state: State<'_, AppState>) -> Result<Option<DeviceInfo>,
     Ok(info)
 }
 
+/// Error returned by the daemon client.
+enum ClientError {
+    /// The daemon socket is not reachable (daemon not running yet).
+    Refused,
+    /// Any other error (read failure, malformed event, etc.).
+    Other(String),
+}
+
 /// Spawns a background task that connects to the daemon and re-emits its
 /// events as Tauri events for the frontend.
 pub fn spawn_daemon_client(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
         loop {
-            if let Err(e) = connect_and_forward(&app).await {
-                eprintln!("daemon client: {e}");
+            match connect_and_forward(&app).await {
+                Ok(()) => {}
+                // The daemon isn't running yet — retry silently.
+                Err(ClientError::Refused) => {}
+                Err(ClientError::Other(e)) => eprintln!("daemon client: {e}"),
             }
             // Reconnect after a short delay (the daemon may not be running yet).
             tokio::time::sleep(Duration::from_millis(1000)).await;
@@ -51,16 +62,25 @@ pub fn spawn_daemon_client(app: AppHandle) {
 }
 
 /// Connects to the daemon socket and forwards events until the connection drops.
-async fn connect_and_forward(app: &AppHandle) -> Result<(), String> {
+async fn connect_and_forward(app: &AppHandle) -> Result<(), ClientError> {
     let path = socket_path();
-    let stream = UnixStream::connect(&path)
-        .await
-        .map_err(|e| e.to_string())?;
+    let stream = UnixStream::connect(&path).await.map_err(|e| {
+        if e.kind() == std::io::ErrorKind::ConnectionRefused {
+            ClientError::Refused
+        } else {
+            ClientError::Other(e.to_string())
+        }
+    })?;
     let reader = BufReader::new(stream);
     let mut lines = reader.lines();
 
-    while let Some(line) = lines.next_line().await.map_err(|e| e.to_string())? {
-        let event: DaemonEvent = serde_json::from_str(&line).map_err(|e| e.to_string())?;
+    while let Some(line) = lines
+        .next_line()
+        .await
+        .map_err(|e| ClientError::Other(e.to_string()))?
+    {
+        let event: DaemonEvent =
+            serde_json::from_str(&line).map_err(|e| ClientError::Other(e.to_string()))?;
         handle_event(app, event);
     }
 
