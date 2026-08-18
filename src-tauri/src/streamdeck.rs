@@ -48,6 +48,9 @@ enum ClientError {
 /// events as Tauri events for the frontend.
 pub fn spawn_daemon_client(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
+        // Try to ensure the daemon is running before connecting.
+        ensure_daemon_running().await;
+
         loop {
             match connect_and_forward(&app).await {
                 Ok(()) => {}
@@ -59,6 +62,24 @@ pub fn spawn_daemon_client(app: AppHandle) {
             tokio::time::sleep(Duration::from_millis(1000)).await;
         }
     });
+}
+
+/// Ensures the daemon is running by enabling and starting its systemd user
+/// service, unless the daemon socket is already reachable.
+async fn ensure_daemon_running() {
+    if socket_reachable().await {
+        return;
+    }
+    let _ = tokio::process::Command::new("systemctl")
+        .args(["--user", "enable", "--now", "stream-deck-pedal"])
+        .output()
+        .await;
+}
+
+/// Returns true if the daemon socket is currently reachable.
+async fn socket_reachable() -> bool {
+    let path = socket_path();
+    UnixStream::connect(&path).await.is_ok()
 }
 
 /// Connects to the daemon socket and forwards events until the connection drops.
