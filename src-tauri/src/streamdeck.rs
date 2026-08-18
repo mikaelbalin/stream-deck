@@ -95,7 +95,7 @@ pub async fn get_device_info(state: State<'_, AppState>) -> Result<Option<Device
 
 /// Emulates a key press or release for the given pedal's binding.
 fn emulate_key(app: &AppHandle, pedal: u8, pressed: bool) {
-    let Some(binding) = binding_for_pedal(app, pedal) else {
+    let Some(binding) = binding_for_pedal(pedal) else {
         return;
     };
     let Some(keys) = binding.to_key_codes() else {

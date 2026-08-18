@@ -1,4 +1,5 @@
 mod bindings;
+mod config;
 mod keyboard;
 mod streamdeck;
 

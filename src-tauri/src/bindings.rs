@@ -1,8 +1,7 @@
-use std::path::PathBuf;
-
 use evdev::KeyCode;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager};
+
+use crate::config::bindings_path;
 
 /// A keyboard shortcut assigned to a pedal.
 #[derive(Clone, Serialize, Deserialize)]
@@ -145,13 +144,8 @@ fn code_to_key_code(code: &str) -> Option<KeyCode> {
 /// Per-pedal bindings (index 0 = left, 1 = middle, 2 = right).
 pub type KeyBindings = [Option<KeyBinding>; 3];
 
-fn config_path(app: &AppHandle) -> Result<PathBuf, String> {
-    let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
-    Ok(dir.join("bindings.json"))
-}
-
-fn load_bindings(app: &AppHandle) -> Result<KeyBindings, String> {
-    let path = config_path(app)?;
+fn load_bindings() -> Result<KeyBindings, String> {
+    let path = bindings_path();
     if !path.exists() {
         return Ok([None, None, None]);
     }
@@ -159,8 +153,8 @@ fn load_bindings(app: &AppHandle) -> Result<KeyBindings, String> {
     serde_json::from_str(&data).map_err(|e| e.to_string())
 }
 
-fn save_bindings(app: &AppHandle, bindings: &KeyBindings) -> Result<(), String> {
-    let path = config_path(app)?;
+fn save_bindings(bindings: &KeyBindings) -> Result<(), String> {
+    let path = bindings_path();
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
@@ -169,24 +163,24 @@ fn save_bindings(app: &AppHandle, bindings: &KeyBindings) -> Result<(), String> 
 }
 
 /// Returns the binding for a specific pedal, if any.
-pub fn binding_for_pedal(app: &AppHandle, pedal: u8) -> Option<KeyBinding> {
-    load_bindings(app).ok()?.get(pedal as usize)?.clone()
+pub fn binding_for_pedal(pedal: u8) -> Option<KeyBinding> {
+    load_bindings().ok()?.get(pedal as usize)?.clone()
 }
 
 /// Returns the current per-pedal key bindings.
 #[tauri::command]
-pub fn get_bindings(app: AppHandle) -> Result<KeyBindings, String> {
-    load_bindings(&app)
+pub fn get_bindings() -> Result<KeyBindings, String> {
+    load_bindings()
 }
 
 /// Sets (or clears, when `binding` is `None`) the key binding for a pedal.
 #[tauri::command]
-pub fn set_binding(app: AppHandle, pedal: u8, binding: Option<KeyBinding>) -> Result<(), String> {
-    let mut bindings = load_bindings(&app)?;
+pub fn set_binding(pedal: u8, binding: Option<KeyBinding>) -> Result<(), String> {
+    let mut bindings = load_bindings()?;
     let index = pedal as usize;
     if index >= bindings.len() {
         return Err(format!("invalid pedal index: {pedal}"));
     }
     bindings[index] = binding;
-    save_bindings(&app, &bindings)
+    save_bindings(&bindings)
 }
