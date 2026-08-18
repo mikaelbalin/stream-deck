@@ -2,10 +2,8 @@
 set -e
 
 # Installs the Stream Deck Pedal daemon as a systemd *user* service.
-#
-# The unit file is generated with the absolute path to the locally built
-# binary, so this is intended for development. The packaged app installs a
-# unit pointing at /usr/bin/stream-deck instead.
+
+# Reuses the packaged unit file, substituting the local binary path. This is intended for development; the packaged app installs the unit as-is (pointing at /usr/bin/stream-deck).
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
@@ -23,20 +21,9 @@ fi
 UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 mkdir -p "$UNIT_DIR"
 
-cat > "$UNIT_DIR/stream-deck-pedal.service" <<EOF
-[Unit]
-Description=Stream Deck Pedal daemon
-After=graphical-session.target
-
-[Service]
-Type=simple
-ExecStart=$BIN --daemon
-Restart=on-failure
-RestartSec=2
-
-[Install]
-WantedBy=default.target
-EOF
+# Reuse the packaged unit file, substituting the local binary path.
+sed "s|/usr/bin/stream-deck|$BIN|" "$ROOT/scripts/stream-deck-pedal.service" \
+    > "$UNIT_DIR/stream-deck-pedal.service"
 
 systemctl --user daemon-reload
 systemctl --user enable --now stream-deck-pedal
