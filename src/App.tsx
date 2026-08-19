@@ -1,8 +1,8 @@
 import "./App.css";
 import { Header } from "@/components/header";
-import { ModeToggle } from "@/components/mode-toggle";
 import { Pedal } from "@/components/pedal";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Titlebar } from "@/components/titlebar";
 import { useBindings } from "@/src/hooks/use-bindings";
 import { useDeviceConnection } from "@/src/hooks/use-device-connection";
 import { useRecording } from "@/src/hooks/use-recording";
@@ -24,8 +24,8 @@ function App() {
 
 	return (
 		<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-			<ModeToggle />
 			<div className="flex min-h-screen flex-col">
+				<Titlebar />
 				<Header connected={connected} />
 				<main className="flex flex-1 items-center justify-center p-6">
 					<div className="flex w-full max-w-md flex-col gap-4 md:max-w-6xl">

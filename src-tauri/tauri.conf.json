@@ -1,57 +1,58 @@
 {
-  "$schema": "https://schema.tauri.app/config/2",
-  "productName": "stream-deck",
-  "version": "0.1.0",
-  "identifier": "com.dev.stream-deck",
-  "build": {
-    "beforeDevCommand": "pnpm dev",
-    "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build",
-    "frontendDist": "../dist"
-  },
-  "app": {
-    "windows": [
-      {
-        "title": "stream-deck",
-        "width": 800,
-        "height": 600
-      }
-    ],
-    "security": {
-      "csp": null
-    }
-  },
-  "bundle": {
-    "active": true,
-    "targets": ["deb", "rpm"],
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ],
-    "linux": {
-      "deb": {
-        "files": {
-          "/etc/udev/rules.d/40-streamdeck-pedal.rules": "../scripts/40-streamdeck-pedal.rules",
-          "/etc/udev/rules.d/40-uinput.rules": "../scripts/40-uinput.rules",
-          "/etc/modules-load.d/uinput.conf": "../scripts/uinput.conf",
-          "/usr/lib/systemd/user/stream-deck-pedal.service": "../scripts/stream-deck-pedal.service"
-        },
-        "postInstallScript": "scripts/postinstall.sh",
-        "postRemoveScript": "scripts/postremove.sh"
-      },
-      "rpm": {
-        "files": {
-          "/etc/udev/rules.d/40-streamdeck-pedal.rules": "../scripts/40-streamdeck-pedal.rules",
-          "/etc/udev/rules.d/40-uinput.rules": "../scripts/40-uinput.rules",
-          "/etc/modules-load.d/uinput.conf": "../scripts/uinput.conf",
-          "/usr/lib/systemd/user/stream-deck-pedal.service": "../scripts/stream-deck-pedal.service"
-        },
-        "postInstallScript": "scripts/postinstall.sh",
-        "postRemoveScript": "scripts/postremove.sh"
-      }
-    }
-  }
+	"$schema": "https://schema.tauri.app/config/2",
+	"productName": "stream-deck",
+	"version": "0.1.0",
+	"identifier": "com.dev.stream-deck",
+	"build": {
+		"beforeDevCommand": "pnpm dev",
+		"devUrl": "http://localhost:1420",
+		"beforeBuildCommand": "pnpm build",
+		"frontendDist": "../dist"
+	},
+	"app": {
+		"windows": [
+			{
+				"title": "stream-deck",
+				"width": 800,
+				"height": 600,
+				"decorations": false
+			}
+		],
+		"security": {
+			"csp": null
+		}
+	},
+	"bundle": {
+		"active": true,
+		"targets": ["deb", "rpm"],
+		"icon": [
+			"icons/32x32.png",
+			"icons/128x128.png",
+			"icons/128x128@2x.png",
+			"icons/icon.icns",
+			"icons/icon.ico"
+		],
+		"linux": {
+			"deb": {
+				"files": {
+					"/etc/udev/rules.d/40-streamdeck-pedal.rules": "../scripts/40-streamdeck-pedal.rules",
+					"/etc/udev/rules.d/40-uinput.rules": "../scripts/40-uinput.rules",
+					"/etc/modules-load.d/uinput.conf": "../scripts/uinput.conf",
+					"/usr/lib/systemd/user/stream-deck-pedal.service": "../scripts/stream-deck-pedal.service"
+				},
+				"postInstallScript": "scripts/postinstall.sh",
+				"postRemoveScript": "scripts/postremove.sh"
+			},
+			"rpm": {
+				"files": {
+					"/etc/udev/rules.d/40-streamdeck-pedal.rules": "../scripts/40-streamdeck-pedal.rules",
+					"/etc/udev/rules.d/40-uinput.rules": "../scripts/40-uinput.rules",
+					"/etc/modules-load.d/uinput.conf": "../scripts/uinput.conf",
+					"/usr/lib/systemd/user/stream-deck-pedal.service": "../scripts/stream-deck-pedal.service"
+				},
+				"postInstallScript": "scripts/postinstall.sh",
+				"postRemoveScript": "scripts/postremove.sh"
+			}
+		}
+	}
 }
