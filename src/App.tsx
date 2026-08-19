@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/card";
 import { Kbd } from "@/components/ui/kbd";
 import "./App.css";
+import { ModeToggle } from "@/components/mode-toggle";
+import { ThemeProvider } from "@/components/theme-provider";
 
 interface DeviceInfo {
 	kind: string;
@@ -215,100 +217,103 @@ function App() {
 	}
 
 	return (
-		<main className="flex min-h-screen items-center justify-center p-6">
-			<Card className="w-full max-w-md">
-				<CardHeader>
-					<CardTitle>Stream Deck Pedal</CardTitle>
-					<CardDescription>Foot pedal controller</CardDescription>
-					<CardAction>
+		<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+			<ModeToggle />
+			<main className="flex min-h-screen items-center justify-center p-6">
+				<Card className="w-full max-w-md">
+					<CardHeader>
+						<CardTitle>Stream Deck Pedal</CardTitle>
+						<CardDescription>Foot pedal controller</CardDescription>
+						<CardAction>
+							{connected ? (
+								<Badge variant="secondary">Connected</Badge>
+							) : (
+								<Badge variant="outline">Disconnected</Badge>
+							)}
+						</CardAction>
+					</CardHeader>
+
+					<CardContent className="flex flex-col gap-4">
 						{connected ? (
-							<Badge variant="secondary">Connected</Badge>
+							<div className="text-sm text-muted-foreground">
+								Serial: {connected.serial}
+								{connected.firmware ? ` · Firmware: ${connected.firmware}` : ""}
+							</div>
 						) : (
-							<Badge variant="outline">Disconnected</Badge>
+							<div className="text-sm text-muted-foreground">
+								No Stream Deck Pedal connected.
+							</div>
 						)}
-					</CardAction>
-				</CardHeader>
 
-				<CardContent className="flex flex-col gap-4">
-					{connected ? (
-						<div className="text-sm text-muted-foreground">
-							Serial: {connected.serial}
-							{connected.firmware ? ` · Firmware: ${connected.firmware}` : ""}
-						</div>
-					) : (
-						<div className="text-sm text-muted-foreground">
-							No Stream Deck Pedal connected.
-						</div>
-					)}
-
-					<div className="flex flex-col gap-3">
-						{PEDAL_LABELS.map((label, index) => {
-							const binding = bindings[index];
-							const isRecording = recordingPedal === index;
-							return (
-								<div
-									key={label}
-									className={`rounded-xl border p-3 transition-colors ${
-										pressed[index]
-											? "border-primary bg-primary/10"
-											: "border-border"
-									}`}
-								>
-									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-2">
-											<span
-												className={`h-3 w-3 rounded-full ${
-													pressed[index] ? "bg-primary" : "bg-muted"
-												}`}
-											/>
-											<span className="text-sm font-medium">{label}</span>
-										</div>
-										{binding && (
-											<Button
-												variant="ghost"
-												size="xs"
-												onClick={() => clearBinding(index)}
-											>
-												Clear
-											</Button>
-										)}
-									</div>
-
-									<div className="mt-2 min-h-5">
-										{isRecording ? (
-											<span className="text-sm text-muted-foreground">
-												Press a key… (Esc to cancel)
-											</span>
-										) : binding ? (
-											<div className="flex flex-wrap items-center gap-1">
-												{bindingParts(binding).map((part) => (
-													<Kbd key={part}>{part}</Kbd>
-												))}
-											</div>
-										) : (
-											<span className="text-sm text-muted-foreground">
-												Not set
-											</span>
-										)}
-									</div>
-
-									<Button
-										variant={isRecording ? "secondary" : "outline"}
-										size="sm"
-										className="mt-2 w-full"
-										onClick={() =>
-											setRecordingPedal(isRecording ? null : index)
-										}
+						<div className="flex flex-col gap-3">
+							{PEDAL_LABELS.map((label, index) => {
+								const binding = bindings[index];
+								const isRecording = recordingPedal === index;
+								return (
+									<div
+										key={label}
+										className={`rounded-xl border p-3 transition-colors ${
+											pressed[index]
+												? "border-primary bg-primary/10"
+												: "border-border"
+										}`}
 									>
-										{isRecording ? "Cancel" : "Record"}
-									</Button>
-								</div>
-							);
-						})}
-					</div>
-				</CardContent>
-			</Card>
-		</main>
+										<div className="flex items-center justify-between">
+											<div className="flex items-center gap-2">
+												<span
+													className={`h-3 w-3 rounded-full ${
+														pressed[index] ? "bg-primary" : "bg-muted"
+													}`}
+												/>
+												<span className="text-sm font-medium">{label}</span>
+											</div>
+											{binding && (
+												<Button
+													variant="ghost"
+													size="xs"
+													onClick={() => clearBinding(index)}
+												>
+													Clear
+												</Button>
+											)}
+										</div>
+
+										<div className="mt-2 min-h-5">
+											{isRecording ? (
+												<span className="text-sm text-muted-foreground">
+													Press a key… (Esc to cancel)
+												</span>
+											) : binding ? (
+												<div className="flex flex-wrap items-center gap-1">
+													{bindingParts(binding).map((part) => (
+														<Kbd key={part}>{part}</Kbd>
+													))}
+												</div>
+											) : (
+												<span className="text-sm text-muted-foreground">
+													Not set
+												</span>
+											)}
+										</div>
+
+										<Button
+											variant={isRecording ? "secondary" : "outline"}
+											size="sm"
+											className="mt-2 w-full"
+											onClick={() =>
+												setRecordingPedal(isRecording ? null : index)
+											}
+										>
+											{isRecording ? "Cancel" : "Record"}
+										</Button>
+									</div>
+								);
+							})}
+						</div>
+					</CardContent>
+				</Card>
+			</main>
+		</ThemeProvider>
 	);
 }
 
