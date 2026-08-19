@@ -28,7 +28,7 @@ function App() {
 			<div className="flex min-h-screen flex-col">
 				<Header connected={connected} />
 				<main className="flex flex-1 items-center justify-center p-6">
-					<div className="flex w-full max-w-md flex-col gap-4 md:max-w-3xl">
+					<div className="flex w-full max-w-md flex-col gap-4 md:max-w-6xl">
 						<div className="flex flex-col gap-3 md:flex-row">
 							{PEDAL_LABELS.map((label, index) => (
 								<Pedal

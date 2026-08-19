@@ -1,11 +1,11 @@
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-	Card,
-	CardAction,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+	InputGroup,
+	InputGroupAddon,
+	InputGroupButton,
+	InputGroupInput,
+	InputGroupText,
+} from "@/components/ui/input-group";
 import { Kbd } from "@/components/ui/kbd";
 import { cn } from "@/lib/utils";
 import { bindingParts, type KeyBinding } from "@/src/utils/key-binding";
@@ -43,40 +43,39 @@ export function Pedal({
 					/>
 					{label}
 				</CardTitle>
-				{binding && (
-					<CardAction>
-						<Button variant="ghost" size="xs" onClick={onClear}>
-							Clear
-						</Button>
-					</CardAction>
-				)}
 			</CardHeader>
 
-			<CardContent className="flex flex-col gap-2">
-				<div className="min-h-5">
+			<CardContent>
+				<InputGroup>
 					{isRecording ? (
-						<span className="text-sm text-muted-foreground">
-							Press a key… (Esc to cancel)
-						</span>
+						<InputGroupInput
+							placeholder="Press a key… (Esc to cancel)"
+							readOnly
+						/>
 					) : binding ? (
-						<div className="flex flex-wrap items-center gap-1">
+						<InputGroupAddon align="inline-start">
 							{bindingParts(binding).map((part) => (
 								<Kbd key={part}>{part}</Kbd>
 							))}
-						</div>
+						</InputGroupAddon>
 					) : (
-						<span className="text-sm text-muted-foreground">Not set</span>
+						<InputGroupAddon align="inline-start">
+							<InputGroupText>Not set</InputGroupText>
+						</InputGroupAddon>
 					)}
-				</div>
 
-				<Button
-					variant={isRecording ? "secondary" : "outline"}
-					size="sm"
-					className="w-full"
-					onClick={onToggleRecording}
-				>
-					{isRecording ? "Cancel" : "Record"}
-				</Button>
+					<InputGroupAddon align="inline-end">
+						{binding && !isRecording && (
+							<InputGroupButton onClick={onClear}>Clear</InputGroupButton>
+						)}
+						<InputGroupButton
+							variant={isRecording ? "secondary" : "outline"}
+							onClick={onToggleRecording}
+						>
+							{isRecording ? "Cancel" : "Record"}
+						</InputGroupButton>
+					</InputGroupAddon>
+				</InputGroup>
 			</CardContent>
 		</Card>
 	);
