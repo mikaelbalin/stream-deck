@@ -1,3 +1,4 @@
+import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Copy, Minus, Square, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -20,7 +21,7 @@ import {
 	MenubarTrigger,
 } from "@/components/ui/menubar";
 
-const appWindow = getCurrentWindow();
+const appWindow = isTauri() ? getCurrentWindow() : null;
 
 interface TitlebarProps {
 	connected: DeviceInfo | null;
@@ -31,6 +32,8 @@ export function Titlebar({ connected }: TitlebarProps) {
 	const [aboutOpen, setAboutOpen] = useState(false);
 
 	useEffect(() => {
+		if (!appWindow) return;
+
 		let disposed = false;
 
 		appWindow.isMaximized().then((value) => {
@@ -49,6 +52,7 @@ export function Titlebar({ connected }: TitlebarProps) {
 	}, []);
 
 	async function toggleFullscreen() {
+		if (!appWindow) return;
 		const isFullscreen = await appWindow.isFullscreen();
 		await appWindow.setFullscreen(!isFullscreen);
 	}
@@ -60,7 +64,7 @@ export function Titlebar({ connected }: TitlebarProps) {
 					<MenubarMenu>
 						<MenubarTrigger>File</MenubarTrigger>
 						<MenubarContent>
-							<MenubarItem onClick={() => appWindow.close()}>
+							<MenubarItem onClick={() => appWindow?.close()}>
 								Quit
 								<MenubarShortcut>Ctrl+Q</MenubarShortcut>
 							</MenubarItem>
@@ -101,7 +105,7 @@ export function Titlebar({ connected }: TitlebarProps) {
 
 					<button
 						type="button"
-						onClick={() => appWindow.minimize()}
+						onClick={() => appWindow?.minimize()}
 						className="flex h-full w-11 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 						aria-label="Minimize"
 					>
@@ -110,7 +114,7 @@ export function Titlebar({ connected }: TitlebarProps) {
 
 					<button
 						type="button"
-						onClick={() => appWindow.toggleMaximize()}
+						onClick={() => appWindow?.toggleMaximize()}
 						className="flex h-full w-11 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 						aria-label={maximized ? "Restore" : "Maximize"}
 					>
@@ -123,7 +127,7 @@ export function Titlebar({ connected }: TitlebarProps) {
 
 					<button
 						type="button"
-						onClick={() => appWindow.close()}
+						onClick={() => appWindow?.close()}
 						className="flex h-full w-11 items-center justify-center text-muted-foreground transition-colors hover:bg-destructive hover:text-destructive-foreground"
 						aria-label="Close"
 					>
