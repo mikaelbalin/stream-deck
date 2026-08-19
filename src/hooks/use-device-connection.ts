@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import type { DeviceInfo } from "@/components/header";
@@ -8,6 +8,8 @@ export function useDeviceConnection() {
 	const [pressed, setPressed] = useState<boolean[]>([false, false, false]);
 
 	useEffect(() => {
+		if (!isTauri()) return;
+
 		let disposed = false;
 		const unlisteners: Promise<() => void>[] = [];
 
