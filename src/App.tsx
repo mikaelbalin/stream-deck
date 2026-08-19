@@ -152,7 +152,7 @@ function App() {
 		<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
 			<ModeToggle />
 			<main className="flex min-h-screen items-center justify-center p-6">
-				<div className="flex w-full max-w-md flex-col gap-4">
+				<div className="flex w-full max-w-md flex-col gap-4 md:max-w-3xl">
 					<div className="flex items-start justify-between">
 						<div>
 							<h1 className="font-heading text-base font-medium">
