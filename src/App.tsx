@@ -2,14 +2,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import {
-	Card,
-	CardAction,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
 import "./App.css";
 import { ModeToggle } from "@/components/mode-toggle";
 import { type KeyBinding, Pedal } from "@/components/pedal";
@@ -160,48 +152,50 @@ function App() {
 		<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
 			<ModeToggle />
 			<main className="flex min-h-screen items-center justify-center p-6">
-				<Card className="w-full max-w-md">
-					<CardHeader>
-						<CardTitle>Stream Deck Pedal</CardTitle>
-						<CardDescription>Foot pedal controller</CardDescription>
-						<CardAction>
-							{connected ? (
-								<Badge variant="secondary">Connected</Badge>
-							) : (
-								<Badge variant="outline">Disconnected</Badge>
-							)}
-						</CardAction>
-					</CardHeader>
-
-					<CardContent className="flex flex-col gap-4">
-						{connected ? (
-							<div className="text-sm text-muted-foreground">
-								Serial: {connected.serial}
-								{connected.firmware ? ` · Firmware: ${connected.firmware}` : ""}
-							</div>
-						) : (
-							<div className="text-sm text-muted-foreground">
-								No Stream Deck Pedal connected.
-							</div>
-						)}
-
-						<div className="flex flex-col gap-3">
-							{PEDAL_LABELS.map((label, index) => (
-								<Pedal
-									key={label}
-									label={label}
-									binding={bindings[index]}
-									pressed={pressed[index]}
-									isRecording={recordingPedal === index}
-									onClear={() => clearBinding(index)}
-									onToggleRecording={() =>
-										setRecordingPedal(recordingPedal === index ? null : index)
-									}
-								/>
-							))}
+				<div className="flex w-full max-w-md flex-col gap-4">
+					<div className="flex items-start justify-between">
+						<div>
+							<h1 className="font-heading text-base font-medium">
+								Stream Deck Pedal
+							</h1>
+							<p className="text-sm text-muted-foreground">
+								Foot pedal controller
+							</p>
 						</div>
-					</CardContent>
-				</Card>
+						{connected ? (
+							<Badge variant="secondary">Connected</Badge>
+						) : (
+							<Badge variant="outline">Disconnected</Badge>
+						)}
+					</div>
+
+					{connected ? (
+						<div className="text-sm text-muted-foreground">
+							Serial: {connected.serial}
+							{connected.firmware ? ` · Firmware: ${connected.firmware}` : ""}
+						</div>
+					) : (
+						<div className="text-sm text-muted-foreground">
+							No Stream Deck Pedal connected.
+						</div>
+					)}
+
+					<div className="flex flex-col md:flex-row gap-3">
+						{PEDAL_LABELS.map((label, index) => (
+							<Pedal
+								key={label}
+								label={label}
+								binding={bindings[index]}
+								pressed={pressed[index]}
+								isRecording={recordingPedal === index}
+								onClear={() => clearBinding(index)}
+								onToggleRecording={() =>
+									setRecordingPedal(recordingPedal === index ? null : index)
+								}
+							/>
+						))}
+					</div>
+				</div>
 			</main>
 		</ThemeProvider>
 	);

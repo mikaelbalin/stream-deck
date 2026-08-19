@@ -1,5 +1,13 @@
 import { Button } from "@/components/ui/button";
+import {
+	Card,
+	CardAction,
+	CardContent,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import { Kbd } from "@/components/ui/kbd";
+import { cn } from "@/lib/utils";
 
 export interface KeyBinding {
 	ctrl: boolean;
@@ -78,51 +86,56 @@ export function Pedal({
 	onToggleRecording,
 }: PedalProps) {
 	return (
-		<div
-			className={`rounded-xl border p-3 transition-colors ${
-				pressed ? "border-primary bg-primary/10" : "border-border"
-			}`}
+		<Card
+			size="default"
+			className={cn("ring-primary bg-primary/10 grow", {
+				"ring-primary": pressed,
+			})}
 		>
-			<div className="flex items-center justify-between">
-				<div className="flex items-center gap-2">
+			<CardHeader>
+				<CardTitle className="flex items-center gap-2">
 					<span
 						className={`h-3 w-3 rounded-full ${
 							pressed ? "bg-primary" : "bg-muted"
 						}`}
 					/>
-					<span className="text-sm font-medium">{label}</span>
-				</div>
+					{label}
+				</CardTitle>
 				{binding && (
-					<Button variant="ghost" size="xs" onClick={onClear}>
-						Clear
-					</Button>
+					<CardAction>
+						<Button variant="ghost" size="xs" onClick={onClear}>
+							Clear
+						</Button>
+					</CardAction>
 				)}
-			</div>
+			</CardHeader>
 
-			<div className="mt-2 min-h-5">
-				{isRecording ? (
-					<span className="text-sm text-muted-foreground">
-						Press a key… (Esc to cancel)
-					</span>
-				) : binding ? (
-					<div className="flex flex-wrap items-center gap-1">
-						{bindingParts(binding).map((part) => (
-							<Kbd key={part}>{part}</Kbd>
-						))}
-					</div>
-				) : (
-					<span className="text-sm text-muted-foreground">Not set</span>
-				)}
-			</div>
+			<CardContent className="flex flex-col gap-2">
+				<div className="min-h-5">
+					{isRecording ? (
+						<span className="text-sm text-muted-foreground">
+							Press a key… (Esc to cancel)
+						</span>
+					) : binding ? (
+						<div className="flex flex-wrap items-center gap-1">
+							{bindingParts(binding).map((part) => (
+								<Kbd key={part}>{part}</Kbd>
+							))}
+						</div>
+					) : (
+						<span className="text-sm text-muted-foreground">Not set</span>
+					)}
+				</div>
 
-			<Button
-				variant={isRecording ? "secondary" : "outline"}
-				size="sm"
-				className="mt-2 w-full"
-				onClick={onToggleRecording}
-			>
-				{isRecording ? "Cancel" : "Record"}
-			</Button>
-		</div>
+				<Button
+					variant={isRecording ? "secondary" : "outline"}
+					size="sm"
+					className="w-full"
+					onClick={onToggleRecording}
+				>
+					{isRecording ? "Cancel" : "Record"}
+				</Button>
+			</CardContent>
+		</Card>
 	);
 }
