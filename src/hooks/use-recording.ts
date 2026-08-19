@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { KeyBinding } from "@/components/pedal";
+import type { KeyBinding } from "@/src/utils/key-binding";
 
 const MODIFIER_CODES = [
 	"ControlLeft",

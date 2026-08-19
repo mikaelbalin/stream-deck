@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useState } from "react";
-import type { KeyBinding } from "@/components/pedal";
+import type { KeyBinding } from "@/src/utils/key-binding";
 
 export function useBindings() {
 	const [bindings, setBindings] = useState<(KeyBinding | null)[]>([
