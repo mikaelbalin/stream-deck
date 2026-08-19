@@ -1,3 +1,4 @@
+import { Circle, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	InputGroup,
@@ -30,7 +31,7 @@ export function Pedal({
 	return (
 		<Card
 			size="default"
-			className={cn("ring-primary bg-primary/10 grow", {
+			className={cn("ring-primary bg-primary/10 min-w-0 flex-1", {
 				"ring-primary": pressed,
 			})}
 		>
@@ -46,7 +47,7 @@ export function Pedal({
 			</CardHeader>
 
 			<CardContent>
-				<InputGroup>
+				<InputGroup className="justify-between">
 					{isRecording ? (
 						<InputGroupInput
 							placeholder="Press a key… (Esc to cancel)"
@@ -66,13 +67,21 @@ export function Pedal({
 
 					<InputGroupAddon align="inline-end">
 						{binding && !isRecording && (
-							<InputGroupButton onClick={onClear}>Clear</InputGroupButton>
+							<InputGroupButton
+								size="icon-xs"
+								aria-label="Clear"
+								onClick={onClear}
+							>
+								<X />
+							</InputGroupButton>
 						)}
 						<InputGroupButton
+							size="icon-xs"
 							variant={isRecording ? "secondary" : "outline"}
+							aria-label={isRecording ? "Cancel" : "Record"}
 							onClick={onToggleRecording}
 						>
-							{isRecording ? "Cancel" : "Record"}
+							{isRecording ? <X /> : <Circle />}
 						</InputGroupButton>
 					</InputGroupAddon>
 				</InputGroup>
