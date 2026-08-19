@@ -25,7 +25,7 @@ function App() {
 	return (
 		<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
 			<div className="flex min-h-screen flex-col">
-				<Titlebar />
+				<Titlebar connected={connected} />
 				<Header connected={connected} />
 				<main className="flex flex-1 items-center justify-center p-6">
 					<div className="flex w-full max-w-md flex-col gap-4 md:max-w-6xl">

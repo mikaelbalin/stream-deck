@@ -24,15 +24,6 @@ export function Header({ connected }: HeaderProps) {
 				<span className="font-medium">
 					{connected ? "Connected" : "Disconnected"}
 				</span>
-				{connected && (
-					<>
-						<span className="h-4 w-px bg-border" />
-						<span className="text-muted-foreground">
-							{connected.firmware ? `FW: ${connected.firmware} · ` : ""}
-							SN: {connected.serial}
-						</span>
-					</>
-				)}
 			</div>
 		</header>
 	);
