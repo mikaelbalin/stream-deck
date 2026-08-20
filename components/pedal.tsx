@@ -51,7 +51,7 @@ export function Pedal({
 				<div
 					className={cn(
 						"relative flex min-h-28 items-center justify-center overflow-hidden rounded-lg transition-colors duration-300 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,var(--border)_10px,var(--border)_11px)]",
-						pressed ? "bg-indigo-950" : "bg-muted",
+						pressed ? "bg-blue-300 dark:bg-blue-900" : "bg-accent",
 					)}
 				/>
 
