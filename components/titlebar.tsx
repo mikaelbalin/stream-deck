@@ -16,7 +16,6 @@ import {
 	MenubarContent,
 	MenubarItem,
 	MenubarMenu,
-	MenubarSeparator,
 	MenubarShortcut,
 	MenubarTrigger,
 } from "@/components/ui/menubar";
@@ -74,12 +73,12 @@ export function Titlebar({ connected }: TitlebarProps) {
 
 					<MenubarMenu>
 						<MenubarTrigger>View</MenubarTrigger>
-						<MenubarContent>
+						<MenubarContent className="min-w-58">
 							<MenubarItem onClick={() => window.location.reload()}>
 								Reload
 								<MenubarShortcut>Ctrl+R</MenubarShortcut>
 							</MenubarItem>
-							<MenubarSeparator />
+
 							<MenubarItem onClick={toggleFullscreen}>
 								Toggle Fullscreen
 								<MenubarShortcut>F11</MenubarShortcut>
