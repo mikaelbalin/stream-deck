@@ -1,5 +1,11 @@
-import { Circle, X } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Keyboard, Lock, X } from "lucide-react";
+import {
+	Card,
+	CardAction,
+	CardContent,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import {
 	InputGroup,
 	InputGroupAddon,
@@ -29,30 +35,29 @@ export function Pedal({
 	onToggleRecording,
 }: PedalProps) {
 	return (
-		<Card
-			size="default"
-			className={cn("ring-primary bg-primary/10 min-w-0 flex-1", {
-				"ring-primary": pressed,
-			})}
-		>
+		<Card className="flex-1">
 			<CardHeader>
-				<CardTitle className="flex items-center gap-2">
-					<span
-						className={`h-3 w-3 rounded-full ${
-							pressed ? "bg-primary" : "bg-muted"
-						}`}
-					/>
-					{label}
-				</CardTitle>
+				<CardTitle>{label}</CardTitle>
+				{/*<CardDescription/>*/}
+				<CardAction>
+					<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+						Locked
+						<Lock className="size-4" />
+					</div>
+				</CardAction>
 			</CardHeader>
 
-			<CardContent>
+			<CardContent className="flex flex-col gap-4">
+				<div
+					className={cn(
+						"relative flex aspect-square items-center justify-center overflow-hidden rounded-lg transition-colors duration-300 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,var(--border)_10px,var(--border)_11px)]",
+						pressed ? "bg-indigo-950" : "bg-muted",
+					)}
+				/>
+
 				<InputGroup className="justify-between">
 					{isRecording ? (
-						<InputGroupInput
-							placeholder="Press a key… (Esc to cancel)"
-							readOnly
-						/>
+						<InputGroupInput placeholder="Press a key…" readOnly />
 					) : binding ? (
 						<InputGroupAddon align="inline-start">
 							{bindingParts(binding).map((part) => (
@@ -77,11 +82,10 @@ export function Pedal({
 						)}
 						<InputGroupButton
 							size="icon-xs"
-							variant={isRecording ? "secondary" : "outline"}
 							aria-label={isRecording ? "Cancel" : "Record"}
 							onClick={onToggleRecording}
 						>
-							{isRecording ? <X /> : <Circle />}
+							{isRecording ? <X /> : <Keyboard />}
 						</InputGroupButton>
 					</InputGroupAddon>
 				</InputGroup>
