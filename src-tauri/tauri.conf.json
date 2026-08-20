@@ -12,11 +12,13 @@
 	"app": {
 		"windows": [
 			{
-				"title": "stream-deck",
+				"title": "Stream Deck Pedal Control",
+				"label": "main",
 				"width": 800,
 				"height": 600,
 				"decorations": false,
-				"resizable": true
+				"resizable": true,
+				"transparent": true
 			}
 		],
 		"security": {
