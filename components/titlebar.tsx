@@ -59,7 +59,7 @@ export function Titlebar({ connected }: TitlebarProps) {
 
 	return (
 		<>
-			<div className="flex h-9 items-center border-b bg-background select-none pl-4 pr-1">
+			<div className="flex h-9 items-center bg-background select-none pl-4 pr-1">
 				<Menubar className="h-full border-0 bg-transparent p-0">
 					<MenubarMenu>
 						<MenubarTrigger>File</MenubarTrigger>

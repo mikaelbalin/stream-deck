@@ -1,11 +1,5 @@
-import { Keyboard, Lock, X } from "lucide-react";
-import {
-	Card,
-	CardAction,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Keyboard, XIcon } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	InputGroup,
 	InputGroupAddon,
@@ -35,16 +29,16 @@ export function Pedal({
 	onToggleRecording,
 }: PedalProps) {
 	return (
-		<Card className="flex-1">
+		<Card className="flex-1 rounded-none">
 			<CardHeader>
 				<CardTitle>{label}</CardTitle>
 				{/*<CardDescription/>*/}
-				<CardAction>
+				{/*<CardAction>
 					<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
 						Locked
 						<Lock className="size-4" />
 					</div>
-				</CardAction>
+				</CardAction>*/}
 			</CardHeader>
 
 			<CardContent className="flex flex-col gap-4">
@@ -77,7 +71,7 @@ export function Pedal({
 								aria-label="Clear"
 								onClick={onClear}
 							>
-								<X />
+								<XIcon />
 							</InputGroupButton>
 						)}
 						<InputGroupButton
@@ -85,7 +79,7 @@ export function Pedal({
 							aria-label={isRecording ? "Cancel" : "Record"}
 							onClick={onToggleRecording}
 						>
-							{isRecording ? <X /> : <Keyboard />}
+							{isRecording ? <XIcon /> : <Keyboard />}
 						</InputGroupButton>
 					</InputGroupAddon>
 				</InputGroup>

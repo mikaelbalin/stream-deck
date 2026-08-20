@@ -3,6 +3,7 @@ import { Header } from "@/components/header";
 import { Pedal } from "@/components/pedal";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Titlebar } from "@/components/titlebar";
+import { Separator } from "@/components/ui/separator";
 import { useBindings } from "@/src/hooks/use-bindings";
 import { useDeviceConnection } from "@/src/hooks/use-device-connection";
 import { useRecording } from "@/src/hooks/use-recording";
@@ -26,23 +27,20 @@ function App() {
 		<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
 			<div className="flex min-h-screen flex-col bg-background overflow-hidden rounded-2xl">
 				<Titlebar connected={connected} />
+				<Separator />
 				<Header connected={connected} />
-				<main className="flex flex-1 items-center justify-center px-6 pb-6">
-					<div className="flex w-full max-w-md flex-col gap-4 md:max-w-6xl">
-						<div className="flex flex-col gap-3 md:flex-row">
-							{PEDAL_LABELS.map((label, index) => (
-								<Pedal
-									key={label}
-									label={label}
-									binding={bindings[index]}
-									pressed={pressed[index]}
-									isRecording={recordingPedal === index}
-									onClear={() => handleClear(index)}
-									onToggleRecording={() => handleToggleRecording(index)}
-								/>
-							))}
-						</div>
-					</div>
+				<main className="flex flex-1 items-center justify-center px-6 pb-6 w-full gap-3">
+					{PEDAL_LABELS.map((label, index) => (
+						<Pedal
+							key={label}
+							label={label}
+							binding={bindings[index]}
+							pressed={pressed[index]}
+							isRecording={recordingPedal === index}
+							onClear={() => handleClear(index)}
+							onToggleRecording={() => handleToggleRecording(index)}
+						/>
+					))}
 				</main>
 			</div>
 		</ThemeProvider>
