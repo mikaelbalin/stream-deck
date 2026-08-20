@@ -1,3 +1,5 @@
+import { Badge } from "./ui/badge";
+
 export interface DeviceInfo {
 	kind: string;
 	serial: string;
@@ -10,10 +12,19 @@ interface HeaderProps {
 
 export function Header({ connected }: HeaderProps) {
 	return (
-		<header className="flex items-center justify-between border-b px-6 py-4">
-			<h1 className="font-heading text-xl font-medium">Stream Deck Pedal</h1>
+		<header className="flex items-center justify-between px-6 py-4">
+			<h1 className="font-heading text-xl font-medium">
+				Stream Deck Pedal Control
+			</h1>
 
-			<div className="flex items-center gap-2 rounded-full border border-border px-4 py-1.5 text-sm">
+			<Badge
+				variant={connected ? "default" : "destructive"}
+				className="min-w-26"
+			>
+				{connected ? "Connected" : "Disconnected"}
+			</Badge>
+
+			{/*<div className="flex items-center gap-2 rounded-full border border-border px-4 py-1.5 text-sm">
 				<span
 					className={`h-2.5 w-2.5 rounded-full ${
 						connected
@@ -24,7 +35,7 @@ export function Header({ connected }: HeaderProps) {
 				<span className="font-medium">
 					{connected ? "Connected" : "Disconnected"}
 				</span>
-			</div>
+			</div>*/}
 		</header>
 	);
 }

@@ -20,6 +20,7 @@ import {
 	MenubarShortcut,
 	MenubarTrigger,
 } from "@/components/ui/menubar";
+import { Button } from "./ui/button";
 
 const appWindow = isTauri() ? getCurrentWindow() : null;
 
@@ -59,7 +60,7 @@ export function Titlebar({ connected }: TitlebarProps) {
 
 	return (
 		<>
-			<div className="flex h-9 items-center border-b bg-background select-none">
+			<div className="flex h-9 items-center border-b bg-background select-none pl-4 pr-1">
 				<Menubar className="h-full border-0 bg-transparent p-0">
 					<MenubarMenu>
 						<MenubarTrigger>File</MenubarTrigger>
@@ -99,40 +100,41 @@ export function Titlebar({ connected }: TitlebarProps) {
 				<div data-tauri-drag-region className="flex-1 self-stretch" />
 
 				<div className="flex h-full items-center">
-					<div className="mr-1 flex items-center">
-						<ModeToggle />
-					</div>
+					<ModeToggle />
 
-					<button
+					<Button
 						type="button"
 						onClick={() => appWindow?.minimize()}
-						className="flex h-full w-11 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 						aria-label="Minimize"
+						size="icon-sm"
+						variant="ghost"
 					>
 						<Minus className="size-4" />
-					</button>
+					</Button>
 
-					<button
+					<Button
 						type="button"
 						onClick={() => appWindow?.toggleMaximize()}
-						className="flex h-full w-11 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 						aria-label={maximized ? "Restore" : "Maximize"}
+						size="icon-sm"
+						variant="ghost"
 					>
 						{maximized ? (
 							<Copy className="size-4" />
 						) : (
 							<Square className="size-4" />
 						)}
-					</button>
+					</Button>
 
-					<button
+					<Button
 						type="button"
 						onClick={() => appWindow?.close()}
-						className="flex h-full w-11 items-center justify-center text-muted-foreground transition-colors hover:bg-destructive hover:text-destructive-foreground"
 						aria-label="Close"
+						size="icon-sm"
+						variant="ghost"
 					>
 						<X className="size-4" />
-					</button>
+					</Button>
 				</div>
 			</div>
 
