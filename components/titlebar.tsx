@@ -59,8 +59,8 @@ export function Titlebar({ connected }: TitlebarProps) {
 
 	return (
 		<>
-			<div className="flex h-9 items-center bg-background select-none pl-4 pr-1">
-				<Menubar className="h-full border-0 bg-transparent p-0">
+			<div className="flex h-9 items-center bg-muted select-none pl-4 pr-1">
+				<Menubar>
 					<MenubarMenu>
 						<MenubarTrigger>File</MenubarTrigger>
 						<MenubarContent>
@@ -98,42 +98,44 @@ export function Titlebar({ connected }: TitlebarProps) {
 
 				<div data-tauri-drag-region className="flex-1 self-stretch" />
 
-				<div className="flex h-full items-center">
+				<div className="flex items-center">
 					<ModeToggle />
 
-					<Button
-						type="button"
-						onClick={() => appWindow?.minimize()}
-						aria-label="Minimize"
-						size="icon-sm"
-						variant="ghost"
-					>
-						<Minus className="size-4" />
-					</Button>
+					<div className="flex items-center gap-1">
+						<Button
+							type="button"
+							onClick={() => appWindow?.minimize()}
+							aria-label="Minimize"
+							size="icon-sm"
+							variant="ghost"
+						>
+							<Minus className="size-4" />
+						</Button>
 
-					<Button
-						type="button"
-						onClick={() => appWindow?.toggleMaximize()}
-						aria-label={maximized ? "Restore" : "Maximize"}
-						size="icon-sm"
-						variant="ghost"
-					>
-						{maximized ? (
-							<Copy className="size-4" />
-						) : (
-							<Square className="size-4" />
-						)}
-					</Button>
+						<Button
+							type="button"
+							onClick={() => appWindow?.toggleMaximize()}
+							aria-label={maximized ? "Restore" : "Maximize"}
+							size="icon-sm"
+							variant="ghost"
+						>
+							{maximized ? (
+								<Copy className="size-4" />
+							) : (
+								<Square className="size-4" />
+							)}
+						</Button>
 
-					<Button
-						type="button"
-						onClick={() => appWindow?.close()}
-						aria-label="Close"
-						size="icon-sm"
-						variant="ghost"
-					>
-						<X className="size-4" />
-					</Button>
+						<Button
+							type="button"
+							onClick={() => appWindow?.close()}
+							aria-label="Close"
+							size="icon-sm"
+							variant="ghost"
+						>
+							<X className="size-4" />
+						</Button>
+					</div>
 				</div>
 			</div>
 

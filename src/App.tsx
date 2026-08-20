@@ -25,7 +25,7 @@ function App() {
 
 	return (
 		<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-			<div className="flex min-h-screen flex-col bg-background overflow-hidden rounded-2xl">
+			<div className="flex min-h-screen flex-col bg-background">
 				<Titlebar connected={connected} />
 				<Separator />
 				<Header connected={connected} />
