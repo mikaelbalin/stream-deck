@@ -34,6 +34,13 @@ function App() {
 						<Pedal
 							key={label}
 							label={label}
+							position={
+								index === 0
+									? "left"
+									: index === PEDAL_LABELS.length - 1
+										? "right"
+										: "middle"
+							}
 							binding={bindings[index]}
 							pressed={pressed[index]}
 							isRecording={recordingPedal === index}

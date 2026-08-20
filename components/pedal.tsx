@@ -13,6 +13,7 @@ import { bindingParts, type KeyBinding } from "@/src/utils/key-binding";
 
 interface PedalProps {
 	label: string;
+	position: "left" | "middle" | "right";
 	binding: KeyBinding | null;
 	pressed: boolean;
 	isRecording: boolean;
@@ -22,6 +23,7 @@ interface PedalProps {
 
 export function Pedal({
 	label,
+	position,
 	binding,
 	pressed,
 	isRecording,
@@ -29,7 +31,13 @@ export function Pedal({
 	onToggleRecording,
 }: PedalProps) {
 	return (
-		<Card className="flex-1 rounded-none">
+		<Card
+			className={cn(
+				"flex-1 rounded-none",
+				position === "left" && "rounded-l-xl",
+				position === "right" && "rounded-r-xl",
+			)}
+		>
 			<CardHeader>
 				<CardTitle>{label}</CardTitle>
 				{/*<CardDescription/>*/}
@@ -44,7 +52,9 @@ export function Pedal({
 			<CardContent className="flex flex-col gap-4">
 				<div
 					className={cn(
-						"relative flex min-h-28 items-center justify-center overflow-hidden rounded-lg transition-colors duration-300 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,var(--border)_10px,var(--border)_11px)]",
+						"relative flex min-h-28 items-center justify-center overflow-hidden rounded-none transition-colors duration-300 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,var(--border)_10px,var(--border)_11px)]",
+						position === "left" && "rounded-l-lg",
+						position === "right" && "rounded-r-lg",
 						pressed ? "bg-blue-300 dark:bg-blue-900" : "bg-accent",
 					)}
 				/>
