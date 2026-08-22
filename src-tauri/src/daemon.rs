@@ -31,7 +31,7 @@ struct DaemonState {
 /// Runs the headless daemon: reads the Pedal, emulates key bindings via uinput,
 /// and broadcasts state events to GUI clients over a Unix domain socket.
 pub async fn run() -> Result<(), String> {
-    let hidapi = elgato_streamdeck::new_hidapi().map_err(|e| e.to_string())?;
+    let mut hidapi = elgato_streamdeck::new_hidapi().map_err(|e| e.to_string())?;
     let mut keyboard = match Keyboard::new() {
         Ok(k) => Some(k),
         Err(e) => {
@@ -97,7 +97,7 @@ pub async fn run() -> Result<(), String> {
                 }
             },
             None => {
-                if let Some(serial) = find_pedal_serial(&hidapi) {
+                if let Some(serial) = find_pedal_serial(&mut hidapi) {
                     match connect(&hidapi, &serial).await {
                         Ok((d, info)) => {
                             eprintln!("daemon: connected {} (serial {})", info.kind, info.serial);
@@ -145,7 +145,12 @@ fn emulate(keyboard: &mut Option<Keyboard>, pedal: u8, pressed: bool) {
 }
 
 /// Returns the serial number of the first connected Stream Deck Pedal, if any.
-fn find_pedal_serial(hidapi: &HidApi) -> Option<String> {
+///
+/// Refreshes the HID device list first: `hidapi` caches the enumeration from
+/// `HidApi::new()`, so without this a device plugged in after startup would
+/// never be seen.
+fn find_pedal_serial(hidapi: &mut HidApi) -> Option<String> {
+    let _ = elgato_streamdeck::refresh_device_list(hidapi);
     elgato_streamdeck::list_devices(hidapi)
         .into_iter()
         .find(|(kind, _)| *kind == Kind::Pedal)
