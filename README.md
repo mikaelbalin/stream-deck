@@ -166,6 +166,42 @@ Remove:
 ./scripts/daemon-remove.sh
 ```
 
+### Rebuilding after code changes
+
+`pnpm tauri dev` rebuilds and runs only the **GUI** (the debug binary). It does
+**not** rebuild or restart the daemon, which keeps running the binary it was
+installed with (the release binary by default). If you change daemon code
+(`src-tauri/src/daemon.rs`, `src-tauri/src/bindings.rs`, or the on-disk
+bindings format), the running daemon will be stale and key emulation will
+silently break.
+
+After such changes, rebuild the binary the daemon points at and restart it:
+
+```sh
+cd src-tauri
+cargo build --release
+systemctl --user restart stream-deck-pedal
+```
+
+Or re-run the install script, which regenerates the unit and restarts the
+service:
+
+```sh
+./scripts/daemon-install.sh
+```
+
+To confirm which binary the daemon is running, check the unit:
+
+```sh
+systemctl --user cat stream-deck-pedal
+```
+
+Daemon logs are available via the journal:
+
+```sh
+journalctl --user -u stream-deck-pedal -f
+```
+
 ### In packages
 
 The package installs `stream-deck-pedal.service` into `/usr/lib/systemd/user/`.
