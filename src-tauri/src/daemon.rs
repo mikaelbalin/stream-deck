@@ -3,13 +3,14 @@ use std::time::Duration;
 
 use elgato_streamdeck::info::Kind;
 use elgato_streamdeck::{AsyncStreamDeck, StreamDeckInput};
+use evdev::KeyCode;
 use hidapi::HidApi;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::unix::OwnedWriteHalf;
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::broadcast;
 
-use crate::bindings::binding_for_pedal;
+use crate::bindings::{binding_for_pedal, threshold_ms};
 use crate::ipc::{socket_path, DaemonEvent};
 use crate::keyboard::Keyboard;
 
@@ -28,20 +29,27 @@ struct DaemonState {
     buttons: [bool; 3],
 }
 
+/// Tracks an in-progress pedal press for tap/hold detection.
+struct PressState {
+    /// Key codes currently held down for the tap action, if any.
+    tap_keys: Option<Vec<KeyCode>>,
+}
+
 /// Runs the headless daemon: reads the Pedal, emulates key bindings via uinput,
 /// and broadcasts state events to GUI clients over a Unix domain socket.
 pub async fn run() -> Result<(), String> {
     let mut hidapi = elgato_streamdeck::new_hidapi().map_err(|e| e.to_string())?;
-    let mut keyboard = match Keyboard::new() {
+    let keyboard = Arc::new(Mutex::new(match Keyboard::new() {
         Ok(k) => Some(k),
         Err(e) => {
             eprintln!("warning: keyboard emulation unavailable: {e}");
             None
         }
-    };
+    }));
 
     let (tx, _rx) = broadcast::channel::<DaemonEvent>(16);
     let state = Arc::new(Mutex::new(DaemonState::default()));
+    let press: Arc<Mutex<[Option<PressState>; 3]>> = Arc::new(Mutex::new([None, None, None]));
 
     // Remove any stale socket left by a previous run, then bind.
     let path = socket_path();
@@ -74,10 +82,10 @@ pub async fn run() -> Result<(), String> {
                     for (pedal, pressed) in changes {
                         if pressed {
                             let _ = tx.send(DaemonEvent::ButtonDown { pedal });
-                            emulate(&mut keyboard, pedal, true);
+                            on_press(&keyboard, &press, &tx, pedal);
                         } else {
                             let _ = tx.send(DaemonEvent::ButtonUp { pedal });
-                            emulate(&mut keyboard, pedal, false);
+                            on_release(&keyboard, &press, pedal);
                         }
                     }
 
@@ -92,6 +100,10 @@ pub async fn run() -> Result<(), String> {
                         let mut st = state.lock().unwrap();
                         st.connected = None;
                         st.buttons = [false; 3];
+                    }
+                    {
+                        let mut press = press.lock().unwrap();
+                        *press = [None, None, None];
                     }
                     let _ = tx.send(DaemonEvent::Disconnected);
                 }
@@ -125,22 +137,90 @@ pub async fn run() -> Result<(), String> {
     }
 }
 
-/// Emulates a key press or release for the given pedal's binding.
-fn emulate(keyboard: &mut Option<Keyboard>, pedal: u8, pressed: bool) {
-    let Some(binding) = binding_for_pedal(pedal) else {
-        return;
-    };
-    let Some(keys) = binding.to_key_codes() else {
-        return;
-    };
-    let Some(kb) = keyboard.as_mut() else {
-        return;
+/// Handles a pedal press: starts the tap action and schedules the hold timer.
+fn on_press(
+    keyboard: &Arc<Mutex<Option<Keyboard>>>,
+    press: &Arc<Mutex<[Option<PressState>; 3]>>,
+    tx: &broadcast::Sender<DaemonEvent>,
+    pedal: u8,
+) {
+    // Press the tap keys (key down) so a quick release completes the tap.
+    let tap_keys = binding_for_pedal(pedal, "tap")
+        .and_then(|binding| binding.to_key_codes())
+        .filter(|keys| press_keys(keyboard, keys));
+
+    {
+        let mut press = press.lock().unwrap();
+        press[pedal as usize] = Some(PressState { tap_keys });
+    }
+
+    // Schedule the hold action: if the pedal is still held when the threshold
+    // elapses, cancel the tap and fire the hold once.
+    let threshold = Duration::from_millis(threshold_ms());
+    let keyboard = keyboard.clone();
+    let press = press.clone();
+    let tx = tx.clone();
+    tokio::spawn(async move {
+        tokio::time::sleep(threshold).await;
+
+        let tap_keys = {
+            let mut press = press.lock().unwrap();
+            let Some(state) = press[pedal as usize].as_mut() else {
+                return; // released before the threshold
+            };
+            state.tap_keys.take()
+        };
+
+        // Cancel the tap by releasing its keys.
+        if let Some(keys) = tap_keys {
+            release_keys(&keyboard, &keys);
+        }
+
+        // Fire the hold action once.
+        if let Some(binding) = binding_for_pedal(pedal, "hold") {
+            if let Some(keys) = binding.to_key_codes() {
+                let mut kb = keyboard.lock().unwrap();
+                if let Some(kb) = kb.as_mut() {
+                    let _ = kb.press(&keys);
+                    let _ = kb.release(&keys);
+                }
+            }
+        }
+
+        let _ = tx.send(DaemonEvent::ButtonHold { pedal });
+    });
+}
+
+/// Handles a pedal release: completes the tap if it wasn't already cancelled.
+fn on_release(
+    keyboard: &Arc<Mutex<Option<Keyboard>>>,
+    press: &Arc<Mutex<[Option<PressState>; 3]>>,
+    pedal: u8,
+) {
+    let tap_keys = {
+        let mut press = press.lock().unwrap();
+        press[pedal as usize].take().and_then(|s| s.tap_keys)
     };
 
-    if pressed {
-        let _ = kb.press(&keys);
-    } else {
-        let _ = kb.release(&keys);
+    if let Some(keys) = tap_keys {
+        release_keys(keyboard, &keys);
+    }
+}
+
+/// Presses the given keys, returning whether the press succeeded.
+fn press_keys(keyboard: &Arc<Mutex<Option<Keyboard>>>, keys: &[KeyCode]) -> bool {
+    let mut kb = keyboard.lock().unwrap();
+    match kb.as_mut() {
+        Some(kb) => kb.press(keys).is_ok(),
+        None => false,
+    }
+}
+
+/// Releases the given keys, ignoring any error.
+fn release_keys(keyboard: &Arc<Mutex<Option<Keyboard>>>, keys: &[KeyCode]) {
+    let mut kb = keyboard.lock().unwrap();
+    if let Some(kb) = kb.as_mut() {
+        let _ = kb.release(keys);
     }
 }
 

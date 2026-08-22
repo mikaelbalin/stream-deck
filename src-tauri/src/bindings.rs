@@ -141,46 +141,110 @@ fn code_to_key_code(code: &str) -> Option<KeyCode> {
     })
 }
 
-/// Per-pedal bindings (index 0 = left, 1 = middle, 2 = right).
-pub type KeyBindings = [Option<KeyBinding>; 3];
-
-fn load_bindings() -> Result<KeyBindings, String> {
-    let path = bindings_path();
-    if !path.exists() {
-        return Ok([None, None, None]);
-    }
-    let data = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
-    serde_json::from_str(&data).map_err(|e| e.to_string())
+/// The two actions (tap and hold) assigned to a single pedal.
+#[derive(Clone, Serialize, Deserialize, Default)]
+pub struct PedalBinding {
+    #[serde(default)]
+    pub tap: Option<KeyBinding>,
+    #[serde(default)]
+    pub hold: Option<KeyBinding>,
 }
 
-fn save_bindings(bindings: &KeyBindings) -> Result<(), String> {
+/// Per-pedal bindings (index 0 = left, 1 = middle, 2 = right).
+pub type KeyBindings = [PedalBinding; 3];
+
+/// The full application configuration persisted to disk.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Config {
+    #[serde(default = "default_threshold_ms")]
+    pub threshold_ms: u64,
+    #[serde(default)]
+    pub bindings: KeyBindings,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            threshold_ms: default_threshold_ms(),
+            bindings: Default::default(),
+        }
+    }
+}
+
+fn default_threshold_ms() -> u64 {
+    500
+}
+
+fn load_config() -> Result<Config, String> {
+    let path = bindings_path();
+    if !path.exists() {
+        return Ok(Config::default());
+    }
+    let data = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    // Treat an unreadable or legacy config as empty so the app can start fresh.
+    Ok(serde_json::from_str(&data).unwrap_or_default())
+}
+
+fn save_config(config: &Config) -> Result<(), String> {
     let path = bindings_path();
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
-    let data = serde_json::to_string_pretty(bindings).map_err(|e| e.to_string())?;
+    let data = serde_json::to_string_pretty(config).map_err(|e| e.to_string())?;
     std::fs::write(&path, data).map_err(|e| e.to_string())
 }
 
-/// Returns the binding for a specific pedal, if any.
-pub fn binding_for_pedal(pedal: u8) -> Option<KeyBinding> {
-    load_bindings().ok()?.get(pedal as usize)?.clone()
+/// Returns the binding for a specific pedal and action kind (`"tap"` or `"hold"`), if any.
+pub fn binding_for_pedal(pedal: u8, kind: &str) -> Option<KeyBinding> {
+    let config = load_config().ok()?;
+    let pedal_binding = config.bindings.get(pedal as usize)?;
+    match kind {
+        "tap" => pedal_binding.tap.clone(),
+        "hold" => pedal_binding.hold.clone(),
+        _ => None,
+    }
+}
+
+/// Returns the current hold threshold in milliseconds.
+pub fn threshold_ms() -> u64 {
+    load_config()
+        .map(|c| c.threshold_ms)
+        .unwrap_or_else(|_| default_threshold_ms())
 }
 
 /// Returns the current per-pedal key bindings.
 #[tauri::command]
 pub fn get_bindings() -> Result<KeyBindings, String> {
-    load_bindings()
+    Ok(load_config()?.bindings)
 }
 
-/// Sets (or clears, when `binding` is `None`) the key binding for a pedal.
+/// Returns the current hold threshold in milliseconds.
 #[tauri::command]
-pub fn set_binding(pedal: u8, binding: Option<KeyBinding>) -> Result<(), String> {
-    let mut bindings = load_bindings()?;
+pub fn get_threshold() -> Result<u64, String> {
+    Ok(load_config()?.threshold_ms)
+}
+
+/// Sets (or clears, when `binding` is `None`) the tap or hold binding for a pedal.
+#[tauri::command]
+pub fn set_binding(pedal: u8, kind: String, binding: Option<KeyBinding>) -> Result<(), String> {
+    let mut config = load_config()?;
     let index = pedal as usize;
-    if index >= bindings.len() {
+    if index >= config.bindings.len() {
         return Err(format!("invalid pedal index: {pedal}"));
     }
-    bindings[index] = binding;
-    save_bindings(&bindings)
+    let pedal_binding = &mut config.bindings[index];
+    match kind.as_str() {
+        "tap" => pedal_binding.tap = binding,
+        "hold" => pedal_binding.hold = binding,
+        _ => return Err(format!("invalid binding kind: {kind}")),
+    }
+    save_config(&config)
+}
+
+/// Sets the global hold threshold in milliseconds.
+#[tauri::command]
+pub fn set_threshold(ms: u64) -> Result<(), String> {
+    let mut config = load_config()?;
+    config.threshold_ms = ms;
+    save_config(&config)
 }

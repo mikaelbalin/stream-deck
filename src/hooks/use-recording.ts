@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import type { BindingKind } from "@/src/hooks/use-bindings";
 import type { KeyBinding } from "@/src/utils/key-binding";
 
 const MODIFIER_CODES = [
@@ -17,22 +18,31 @@ function isModifier(code: string): boolean {
 }
 
 interface UseRecordingOptions {
-	setBinding: (pedal: number, binding: KeyBinding | null) => void;
+	setBinding: (
+		pedal: number,
+		kind: BindingKind,
+		binding: KeyBinding | null,
+	) => void;
+}
+
+interface RecordingTarget {
+	pedal: number;
+	kind: BindingKind;
 }
 
 export function useRecording({ setBinding }: UseRecordingOptions) {
-	const [recordingPedal, setRecordingPedal] = useState<number | null>(null);
+	const [recording, setRecording] = useState<RecordingTarget | null>(null);
 
 	useEffect(() => {
-		if (recordingPedal === null) return;
-		const pedal = recordingPedal;
+		if (recording === null) return;
+		const { pedal, kind } = recording;
 
 		function handleKeyDown(event: KeyboardEvent) {
 			event.preventDefault();
 			event.stopPropagation();
 
 			if (event.code === "Escape") {
-				setRecordingPedal(null);
+				setRecording(null);
 				return;
 			}
 
@@ -48,17 +58,21 @@ export function useRecording({ setBinding }: UseRecordingOptions) {
 				code: event.code,
 			};
 
-			setRecordingPedal(null);
-			setBinding(pedal, binding);
+			setRecording(null);
+			setBinding(pedal, kind, binding);
 		}
 
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [recordingPedal, setBinding]);
+	}, [recording, setBinding]);
 
-	const toggleRecording = useCallback((pedal: number) => {
-		setRecordingPedal((current) => (current === pedal ? null : pedal));
+	const toggleRecording = useCallback((pedal: number, kind: BindingKind) => {
+		setRecording((current) =>
+			current?.pedal === pedal && current.kind === kind
+				? null
+				: { pedal, kind },
+		);
 	}, []);
 
-	return { recordingPedal, toggleRecording };
+	return { recording, toggleRecording };
 }

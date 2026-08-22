@@ -145,5 +145,8 @@ fn handle_event(app: &AppHandle, event: DaemonEvent) {
         DaemonEvent::ButtonUp { pedal } => {
             let _ = app.emit("pedal-button-up", pedal);
         }
+        DaemonEvent::ButtonHold { pedal } => {
+            let _ = app.emit("pedal-button-hold", pedal);
+        }
     }
 }

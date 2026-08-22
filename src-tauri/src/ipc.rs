@@ -20,6 +20,9 @@ pub enum DaemonEvent {
     ButtonUp {
         pedal: u8,
     },
+    ButtonHold {
+        pedal: u8,
+    },
 }
 
 /// Returns the path to the daemon's Unix domain socket.

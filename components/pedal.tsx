@@ -1,5 +1,6 @@
 import { Keyboard, XIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldLabel } from "@/components/ui/field";
 import {
 	InputGroup,
 	InputGroupAddon,
@@ -9,16 +10,78 @@ import {
 } from "@/components/ui/input-group";
 import { Kbd } from "@/components/ui/kbd";
 import { cn } from "@/lib/utils";
-import { bindingParts, type KeyBinding } from "@/src/utils/key-binding";
+import type { BindingKind } from "@/src/hooks/use-bindings";
+import {
+	bindingParts,
+	type KeyBinding,
+	type PedalBinding,
+} from "@/src/utils/key-binding";
 
 interface PedalProps {
 	label: string;
 	position: "left" | "middle" | "right";
-	binding: KeyBinding | null;
+	binding: PedalBinding;
 	pressed: boolean;
+	held: boolean;
+	recordingKind: BindingKind | null;
+	onClear: (kind: BindingKind) => void;
+	onToggleRecording: (kind: BindingKind) => void;
+}
+
+interface BindingFieldProps {
+	label: string;
+	binding: KeyBinding | null;
 	isRecording: boolean;
 	onClear: () => void;
 	onToggleRecording: () => void;
+}
+
+function BindingField({
+	label,
+	binding,
+	isRecording,
+	onClear,
+	onToggleRecording,
+}: BindingFieldProps) {
+	return (
+		<Field>
+			<FieldLabel>{label}</FieldLabel>
+			<InputGroup className="justify-between">
+				{isRecording ? (
+					<InputGroupInput placeholder="Press a key…" readOnly />
+				) : binding ? (
+					<InputGroupAddon align="inline-start">
+						{bindingParts(binding).map((part) => (
+							<Kbd key={part}>{part}</Kbd>
+						))}
+					</InputGroupAddon>
+				) : (
+					<InputGroupAddon align="inline-start">
+						<InputGroupText>Not set</InputGroupText>
+					</InputGroupAddon>
+				)}
+
+				<InputGroupAddon align="inline-end">
+					{binding && !isRecording && (
+						<InputGroupButton
+							size="icon-xs"
+							aria-label={`Clear ${label}`}
+							onClick={onClear}
+						>
+							<XIcon />
+						</InputGroupButton>
+					)}
+					<InputGroupButton
+						size="icon-xs"
+						aria-label={isRecording ? "Cancel" : `Record ${label}`}
+						onClick={onToggleRecording}
+					>
+						{isRecording ? <XIcon /> : <Keyboard />}
+					</InputGroupButton>
+				</InputGroupAddon>
+			</InputGroup>
+		</Field>
+	);
 }
 
 export function Pedal({
@@ -26,7 +89,8 @@ export function Pedal({
 	position,
 	binding,
 	pressed,
-	isRecording,
+	held,
+	recordingKind,
 	onClear,
 	onToggleRecording,
 }: PedalProps) {
@@ -40,13 +104,6 @@ export function Pedal({
 		>
 			<CardHeader>
 				<CardTitle>{label}</CardTitle>
-				{/*<CardDescription/>*/}
-				{/*<CardAction>
-					<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-						Locked
-						<Lock className="size-4" />
-					</div>
-				</CardAction>*/}
 			</CardHeader>
 
 			<CardContent className="flex flex-col gap-4">
@@ -55,44 +112,28 @@ export function Pedal({
 						"relative flex min-h-28 items-center justify-center overflow-hidden rounded-none transition-colors duration-300 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,var(--border)_10px,var(--border)_11px)]",
 						position === "left" && "rounded-l-lg",
 						position === "right" && "rounded-r-lg",
-						pressed ? "bg-blue-300 dark:bg-blue-900" : "bg-accent",
+						held
+							? "bg-purple-300 dark:bg-purple-900"
+							: pressed
+								? "bg-blue-300 dark:bg-blue-900"
+								: "bg-accent",
 					)}
 				/>
 
-				<InputGroup className="justify-between">
-					{isRecording ? (
-						<InputGroupInput placeholder="Press a key…" readOnly />
-					) : binding ? (
-						<InputGroupAddon align="inline-start">
-							{bindingParts(binding).map((part) => (
-								<Kbd key={part}>{part}</Kbd>
-							))}
-						</InputGroupAddon>
-					) : (
-						<InputGroupAddon align="inline-start">
-							<InputGroupText>Not set</InputGroupText>
-						</InputGroupAddon>
-					)}
-
-					<InputGroupAddon align="inline-end">
-						{binding && !isRecording && (
-							<InputGroupButton
-								size="icon-xs"
-								aria-label="Clear"
-								onClick={onClear}
-							>
-								<XIcon />
-							</InputGroupButton>
-						)}
-						<InputGroupButton
-							size="icon-xs"
-							aria-label={isRecording ? "Cancel" : "Record"}
-							onClick={onToggleRecording}
-						>
-							{isRecording ? <XIcon /> : <Keyboard />}
-						</InputGroupButton>
-					</InputGroupAddon>
-				</InputGroup>
+				<BindingField
+					label="Tap"
+					binding={binding.tap}
+					isRecording={recordingKind === "tap"}
+					onClear={() => onClear("tap")}
+					onToggleRecording={() => onToggleRecording("tap")}
+				/>
+				<BindingField
+					label="Hold"
+					binding={binding.hold}
+					isRecording={recordingKind === "hold"}
+					onClear={() => onClear("hold")}
+					onToggleRecording={() => onToggleRecording("hold")}
+				/>
 			</CardContent>
 		</Card>
 	);

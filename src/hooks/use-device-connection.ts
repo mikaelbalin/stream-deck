@@ -6,6 +6,7 @@ import type { DeviceInfo } from "@/components/header";
 export function useDeviceConnection() {
 	const [connected, setConnected] = useState<DeviceInfo | null>(null);
 	const [pressed, setPressed] = useState<boolean[]>([false, false, false]);
+	const [held, setHeld] = useState<boolean[]>([false, false, false]);
 
 	useEffect(() => {
 		if (!isTauri()) return;
@@ -18,6 +19,7 @@ export function useDeviceConnection() {
 				if (disposed) return;
 				setConnected(event.payload);
 				setPressed([false, false, false]);
+				setHeld([false, false, false]);
 			}),
 		);
 
@@ -26,6 +28,7 @@ export function useDeviceConnection() {
 				if (disposed) return;
 				setConnected(null);
 				setPressed([false, false, false]);
+				setHeld([false, false, false]);
 			}),
 		);
 
@@ -35,6 +38,9 @@ export function useDeviceConnection() {
 				setPressed((prev) =>
 					prev.map((value, index) => (index === event.payload ? true : value)),
 				);
+				setHeld((prev) =>
+					prev.map((value, index) => (index === event.payload ? false : value)),
+				);
 			}),
 		);
 
@@ -43,6 +49,18 @@ export function useDeviceConnection() {
 				if (disposed) return;
 				setPressed((prev) =>
 					prev.map((value, index) => (index === event.payload ? false : value)),
+				);
+				setHeld((prev) =>
+					prev.map((value, index) => (index === event.payload ? false : value)),
+				);
+			}),
+		);
+
+		unlisteners.push(
+			listen<number>("pedal-button-hold", (event) => {
+				if (disposed) return;
+				setHeld((prev) =>
+					prev.map((value, index) => (index === event.payload ? true : value)),
 				);
 			}),
 		);
@@ -63,5 +81,5 @@ export function useDeviceConnection() {
 		};
 	}, []);
 
-	return { connected, pressed };
+	return { connected, pressed, held };
 }

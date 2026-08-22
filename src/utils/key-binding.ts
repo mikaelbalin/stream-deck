@@ -6,6 +6,11 @@ export interface KeyBinding {
 	code: string;
 }
 
+export interface PedalBinding {
+	tap: KeyBinding | null;
+	hold: KeyBinding | null;
+}
+
 function formatCode(code: string): string {
 	if (code.startsWith("Key")) return code.slice(3);
 	if (code.startsWith("Digit")) return code.slice(5);
