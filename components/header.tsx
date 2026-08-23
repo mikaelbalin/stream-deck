@@ -12,7 +12,7 @@ interface HeaderProps {
 
 export function Header({ connected }: HeaderProps) {
 	return (
-		<header className="flex items-center justify-between px-6 py-4">
+		<header className="flex items-center justify-between px-6 pt-8 pb-6">
 			<h1 className="font-heading text-xl font-medium">
 				Stream Deck Pedal Control
 			</h1>

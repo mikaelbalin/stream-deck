@@ -32,7 +32,7 @@ function App() {
 				<Titlebar connected={connected} />
 				<Separator />
 				<Header connected={connected} />
-				<div className="px-6 pt-2">
+				<div className="px-6 pt-2 pb-6">
 					<Field orientation="horizontal">
 						<FieldLabel className="whitespace-nowrap">
 							Hold threshold
