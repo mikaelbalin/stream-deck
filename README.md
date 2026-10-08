@@ -227,9 +227,29 @@ This produces installable packages in `src-tauri/target/release/bundle/`:
 
 - `stream-deck_0.1.0_amd64.deb` (x86_64) / `stream-deck_0.1.0_arm64.deb` (arm64)
 - `stream-deck-0.1.0-1.x86_64.rpm` (x86_64)
+- `stream-deck_0.1.0_amd64.AppImage` (x86_64)
 
 Packages are built for the architecture of the machine running the build. To
 produce an `arm64` package for Raspberry Pi OS, build on the Pi itself.
+
+### AppImage
+
+Build only the AppImage:
+
+```sh
+pnpm build:appimage
+```
+
+On distributions that compile libraries with `DT_RELR` (`.relr.dyn`, e.g.
+Bazzite / Fedora 44+), the `strip` binary bundled inside the `linuxdeploy`
+AppImage is too old to handle that section and the bundling fails with
+`failed to run linuxdeploy`. The `build:appimage` script sets `NO_STRIP=1` to
+skip the redundant re-strip (the Tauri release binary is already stripped),
+which avoids the failure:
+
+```sh
+NO_STRIP=1 pnpm tauri build --bundles appimage
+```
 
 ## Installing the built packages
 
@@ -295,3 +315,31 @@ On install, `40-streamdeck-pedal.rules` and `40-uinput.rules` are placed in
 `postinstall.sh` reloads udev, loads the `uinput` module, and triggers udev.
 On removal, the package manager deletes these files and `postremove.sh` reloads
 udev. No manual cleanup is needed.
+
+### AppImage
+
+The AppImage is a portable, self-contained binary — it does **not** perform the
+system setup that `deb`/`rpm` do via `postinstall.sh`. It does not install the
+udev rules, load the `uinput` module, or install the systemd user unit.
+
+To run it:
+
+```sh
+./src-tauri/target/release/bundle/appimage/stream-deck_0.1.0_amd64.AppImage
+```
+
+For the app to access the Pedal and emulate keys, run the setup manually first:
+
+```sh
+sudo ./scripts/udev-install.sh
+./scripts/daemon-install.sh
+```
+
+`udev-install.sh` installs the udev rules and `uinput.conf`, then loads the
+`uinput` module (see "udev rules" above). `daemon-install.sh` installs and
+enables the systemd user service pointing at a locally built binary (see
+"Daemon" above). Alternatively, the daemon can be run manually:
+
+```sh
+./src-tauri/target/release/stream-deck --daemon
+```
