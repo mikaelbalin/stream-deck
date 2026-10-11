@@ -1,5 +1,6 @@
 import { Keyboard, XIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldLabel } from "@/components/ui/field";
 import {
 	InputGroup,
@@ -26,6 +27,7 @@ interface PedalProps {
 	recordingKind: BindingKind | null;
 	onClear: (kind: BindingKind) => void;
 	onToggleRecording: (kind: BindingKind) => void;
+	onToggleHoldPress: (press: boolean) => void;
 }
 
 interface BindingFieldProps {
@@ -93,6 +95,7 @@ export function Pedal({
 	recordingKind,
 	onClear,
 	onToggleRecording,
+	onToggleHoldPress,
 }: PedalProps) {
 	return (
 		<Card
@@ -134,6 +137,24 @@ export function Pedal({
 					onClear={() => onClear("hold")}
 					onToggleRecording={() => onToggleRecording("hold")}
 				/>
+
+				<Field orientation="horizontal" className="items-center gap-2">
+					<Checkbox
+						checked={binding.holdPress}
+						onCheckedChange={(checked) => {
+							onToggleHoldPress(checked);
+							// Снять фокус с чекбокса, чтобы эмулируемые педалью
+							// клавиши (например Space) не переключали его повторно.
+							if (document.activeElement instanceof HTMLElement) {
+								document.activeElement.blur();
+							}
+						}}
+						disabled={!binding.hold}
+					/>
+					<FieldLabel className="text-muted-foreground">
+						Press &amp; hold
+					</FieldLabel>
+				</Field>
 			</CardContent>
 		</Card>
 	);

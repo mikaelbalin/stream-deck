@@ -9,6 +9,7 @@ export interface KeyBinding {
 export interface PedalBinding {
 	tap: KeyBinding | null;
 	hold: KeyBinding | null;
+	holdPress: boolean;
 }
 
 function formatCode(code: string): string {

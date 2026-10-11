@@ -14,8 +14,14 @@ const PEDAL_LABELS = ["Left", "Middle", "Right"];
 
 function App() {
 	const { connected, pressed, held } = useDeviceConnection();
-	const { bindings, setBinding, clearBinding, thresholdMs, setThreshold } =
-		useBindings();
+	const {
+		bindings,
+		setBinding,
+		clearBinding,
+		setHoldPress,
+		thresholdMs,
+		setThreshold,
+	} = useBindings();
 	const { recording, toggleRecording } = useRecording({ setBinding });
 
 	function handleClear(index: number, kind: BindingKind) {
@@ -24,6 +30,10 @@ function App() {
 
 	function handleToggleRecording(index: number, kind: BindingKind) {
 		toggleRecording(index, kind);
+	}
+
+	function handleToggleHoldPress(index: number, press: boolean) {
+		setHoldPress(index, press);
 	}
 
 	return (
@@ -68,6 +78,7 @@ function App() {
 							recordingKind={recording?.pedal === index ? recording.kind : null}
 							onClear={(kind) => handleClear(index, kind)}
 							onToggleRecording={(kind) => handleToggleRecording(index, kind)}
+							onToggleHoldPress={(press) => handleToggleHoldPress(index, press)}
 						/>
 					))}
 				</main>

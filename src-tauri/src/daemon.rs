@@ -11,7 +11,7 @@ use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
 
-use crate::bindings::{binding_for_pedal, threshold_ms};
+use crate::bindings::{binding_for_pedal, hold_press_for_pedal, threshold_ms};
 use crate::ipc::{socket_path, DaemonEvent};
 use crate::keyboard::Keyboard;
 
@@ -36,6 +36,9 @@ struct PressState {
     hold_fired: bool,
     /// Handle to the hold timer, aborted when the pedal is released early.
     timer: JoinHandle<()>,
+    /// When true, this pedal is in "press and hold" mode: its hold keys were
+    /// pressed immediately on pedal-down and must be released on pedal-up.
+    holding_keys: bool,
 }
 
 /// Runs the headless daemon: reads the Pedal, emulates key bindings via uinput,
@@ -140,17 +143,19 @@ pub async fn run() -> Result<(), String> {
     }
 }
 
-/// Handles a pedal press: records the press and schedules the hold timer.
+/// Handles a pedal press.
 ///
-/// No keys are pressed here — the tap/hold decision is deferred until either
-/// the pedal is released (tap) or the threshold elapses (hold). This avoids
-/// emitting a tap key-down that a target app would treat as an immediate tap.
+/// In "press and hold" mode the tap/hold decision is deferred by a timer:
+/// releasing before the threshold fires the tap action (a click), while holding
+/// past the threshold presses the hold keys and keeps them held until release.
+/// In the default mode the same timer fires the hold action once as a tap.
 fn on_press(
     keyboard: &Arc<Mutex<Option<Keyboard>>>,
     press: &Arc<Mutex<[Option<PressState>; 3]>>,
     tx: &broadcast::Sender<DaemonEvent>,
     pedal: u8,
 ) {
+    let press_and_hold = hold_press_for_pedal(pedal);
     let threshold = Duration::from_millis(threshold_ms());
     let keyboard = keyboard.clone();
     let press_for_timer = press.clone();
@@ -167,12 +172,22 @@ fn on_press(
                 return;
             }
             state.hold_fired = true;
+            if press_and_hold {
+                // Mark that we are now holding keys; they will be released on
+                // pedal-up.
+                state.holding_keys = true;
+            }
         }
 
-        // Fire the hold action once.
         if let Some(binding) = binding_for_pedal(pedal, "hold") {
             if let Some(keys) = binding.to_key_codes() {
-                tap_keys(&keyboard, &keys);
+                if press_and_hold {
+                    // Hold mode: press now and keep held until release.
+                    press_keys(&keyboard, &keys);
+                } else {
+                    // Default mode: fire the hold action once as a tap.
+                    tap_keys(&keyboard, &keys);
+                }
             }
         }
 
@@ -184,11 +199,13 @@ fn on_press(
         press[pedal as usize] = Some(PressState {
             hold_fired: false,
             timer,
+            holding_keys: false,
         });
     }
 }
 
-/// Handles a pedal release: fires the tap action if the hold hasn't fired yet.
+/// Handles a pedal release: releases held keys (press-and-hold mode) or fires
+/// the tap action if the hold hasn't fired yet.
 fn on_release(
     keyboard: &Arc<Mutex<Option<Keyboard>>>,
     press: &Arc<Mutex<[Option<PressState>; 3]>>,
@@ -206,6 +223,16 @@ fn on_release(
     // Cancel the hold timer — the pedal was released before the threshold.
     state.timer.abort();
 
+    // Press-and-hold mode: release the keys we pressed when the hold fired.
+    if state.holding_keys {
+        if let Some(binding) = binding_for_pedal(pedal, "hold") {
+            if let Some(keys) = binding.to_key_codes() {
+                release_keys(keyboard, &keys);
+            }
+        }
+        return;
+    }
+
     // Released before the threshold — this was a tap.
     if !state.hold_fired {
         if let Some(binding) = binding_for_pedal(pedal, "tap") {
@@ -221,6 +248,22 @@ fn tap_keys(keyboard: &Arc<Mutex<Option<Keyboard>>>, keys: &[KeyCode]) {
     let mut kb = keyboard.lock().unwrap();
     if let Some(kb) = kb.as_mut() {
         let _ = kb.press(keys);
+        let _ = kb.release(keys);
+    }
+}
+
+/// Presses the given keys without releasing them.
+fn press_keys(keyboard: &Arc<Mutex<Option<Keyboard>>>, keys: &[KeyCode]) {
+    let mut kb = keyboard.lock().unwrap();
+    if let Some(kb) = kb.as_mut() {
+        let _ = kb.press(keys);
+    }
+}
+
+/// Releases the given keys.
+fn release_keys(keyboard: &Arc<Mutex<Option<Keyboard>>>, keys: &[KeyCode]) {
+    let mut kb = keyboard.lock().unwrap();
+    if let Some(kb) = kb.as_mut() {
         let _ = kb.release(keys);
     }
 }

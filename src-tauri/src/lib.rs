@@ -5,7 +5,7 @@ mod ipc;
 mod keyboard;
 mod streamdeck;
 
-use bindings::{get_bindings, get_threshold, set_binding, set_threshold};
+use bindings::{get_bindings, get_threshold, set_binding, set_hold_press, set_threshold};
 use streamdeck::{get_device_info, spawn_daemon_client, AppState};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -28,6 +28,7 @@ pub fn run() {
             get_device_info,
             get_bindings,
             set_binding,
+            set_hold_press,
             get_threshold,
             set_threshold
         ])

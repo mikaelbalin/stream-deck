@@ -143,11 +143,18 @@ fn code_to_key_code(code: &str) -> Option<KeyCode> {
 
 /// The two actions (tap and hold) assigned to a single pedal.
 #[derive(Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct PedalBinding {
     #[serde(default)]
     pub tap: Option<KeyBinding>,
     #[serde(default)]
     pub hold: Option<KeyBinding>,
+    /// When true, the `hold` action behaves as "press and hold": the bound keys
+    /// are pressed when the pedal is held past the threshold and released when
+    /// the pedal is released. When false (default), holding past the threshold
+    /// fires the hold action once as a tap.
+    #[serde(default, alias = "hold_press")]
+    pub hold_press: bool,
 }
 
 /// Per-pedal bindings (index 0 = left, 1 = middle, 2 = right).
@@ -205,6 +212,15 @@ pub fn binding_for_pedal(pedal: u8, kind: &str) -> Option<KeyBinding> {
     }
 }
 
+/// Returns whether the given pedal's `hold` action is in "press and hold" mode.
+pub fn hold_press_for_pedal(pedal: u8) -> bool {
+    load_config()
+        .ok()
+        .and_then(|c| c.bindings.get(pedal as usize).cloned())
+        .map(|b| b.hold_press)
+        .unwrap_or(false)
+}
+
 /// Returns the current hold threshold in milliseconds.
 pub fn threshold_ms() -> u64 {
     load_config()
@@ -246,5 +262,17 @@ pub fn set_binding(pedal: u8, kind: String, binding: Option<KeyBinding>) -> Resu
 pub fn set_threshold(ms: u64) -> Result<(), String> {
     let mut config = load_config()?;
     config.threshold_ms = ms;
+    save_config(&config)
+}
+
+/// Toggles the "press and hold" behavior of a pedal's `hold` action.
+#[tauri::command]
+pub fn set_hold_press(pedal: u8, press: bool) -> Result<(), String> {
+    let mut config = load_config()?;
+    let index = pedal as usize;
+    if index >= config.bindings.len() {
+        return Err(format!("invalid pedal index: {pedal}"));
+    }
+    config.bindings[index].hold_press = press;
     save_config(&config)
 }

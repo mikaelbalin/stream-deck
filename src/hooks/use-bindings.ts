@@ -6,9 +6,9 @@ export type BindingKind = "tap" | "hold";
 
 export function useBindings() {
 	const [bindings, setBindings] = useState<PedalBinding[]>([
-		{ tap: null, hold: null },
-		{ tap: null, hold: null },
-		{ tap: null, hold: null },
+		{ tap: null, hold: null, holdPress: false },
+		{ tap: null, hold: null, holdPress: false },
+		{ tap: null, hold: null, holdPress: false },
 	]);
 	const [thresholdMs, setThresholdMs] = useState(500);
 
@@ -60,5 +60,23 @@ export function useBindings() {
 			.catch(() => {});
 	}, []);
 
-	return { bindings, setBinding, clearBinding, thresholdMs, setThreshold };
+	const setHoldPress = useCallback((pedal: number, press: boolean) => {
+		// Optimistically update the UI, then persist. Keeping the checkbox in
+		// sync with local state (rather than waiting for the invoke to resolve)
+		// prevents it from visually resetting if the backend call is slow or
+		// the pedal fires a re-render in the meantime.
+		setBindings((prev) =>
+			prev.map((b, i) => (i === pedal ? { ...b, holdPress: press } : b)),
+		);
+		invoke("set_hold_press", { pedal, press }).catch(() => {});
+	}, []);
+
+	return {
+		bindings,
+		setBinding,
+		clearBinding,
+		setHoldPress,
+		thresholdMs,
+		setThreshold,
+	};
 }
