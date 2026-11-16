@@ -33,8 +33,14 @@ Windows and macOS are intentionally out of scope.
 
 - Rust toolchain (stable)
 - Node.js + pnpm
-- On Debian-based systems (Raspberry Pi OS), the `hidapi` crate may need
-  `libudev-dev` at link time:
+- Tauri's GTK/WebKit toolchain (required on Debian-based systems such as
+  Raspberry Pi OS):
+  ```sh
+  sudo apt update
+  sudo apt install libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libssl-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
+  ```
+- The `hidapi` crate also needs `libudev-dev` at link time on Debian-based
+  systems (Raspberry Pi OS):
   ```sh
   sudo apt install libudev-dev
   ```
