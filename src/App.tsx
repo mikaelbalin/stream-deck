@@ -1,7 +1,4 @@
 import "./App.css";
-import { isTauri } from "@tauri-apps/api/core";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useEffect, useState } from "react";
 import { Header } from "@/components/header";
 import { Pedal } from "@/components/pedal";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -9,45 +6,14 @@ import { Titlebar } from "@/components/titlebar";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
-import { cn } from "@/lib/utils";
 import { type BindingKind, useBindings } from "@/src/hooks/use-bindings";
 import { useDeviceConnection } from "@/src/hooks/use-device-connection";
 import { useRecording } from "@/src/hooks/use-recording";
 
 const PEDAL_LABELS = ["Left", "Middle", "Right"];
 
-const appWindow = isTauri() ? getCurrentWindow() : null;
-
 function App() {
 	const { connected, pressed, held } = useDeviceConnection();
-	const [maximized, setMaximized] = useState(false);
-	const [fullscreen, setFullscreen] = useState(false);
-
-	useEffect(() => {
-		if (!appWindow) return;
-
-		let disposed = false;
-
-		const sync = async () => {
-			const [m, f] = await Promise.all([
-				appWindow.isMaximized(),
-				appWindow.isFullscreen(),
-			]);
-			if (!disposed) {
-				setMaximized(m);
-				setFullscreen(f);
-			}
-		};
-
-		sync();
-
-		const unlisten = appWindow.onResized(sync);
-
-		return () => {
-			disposed = true;
-			unlisten.then((fn) => fn());
-		};
-	}, []);
 
 	const {
 		bindings,
@@ -73,12 +39,7 @@ function App() {
 
 	return (
 		<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-			<div
-				className={cn(
-					"flex min-h-screen flex-col overflow-hidden bg-background",
-					!fullscreen && !maximized && "rounded-lg",
-				)}
-			>
+			<div className="flex min-h-screen flex-col overflow-hidden bg-background">
 				<Titlebar connected={connected} />
 				<Separator />
 				<Header connected={connected} />
